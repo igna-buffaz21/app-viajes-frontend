@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_ROUTES } from "@/config/app.routes";
+import { Logo } from "@/components/brand/Logo";
 
 import { useAppAuth } from "../useAppAuth";
 
@@ -36,8 +37,10 @@ export default function AccessPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 sm:px-6">
       <div className="w-full max-w-sm space-y-8 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">FreeVago</h1>
-          <p className="mt-2 text-muted-foreground">
+          <div className="flex justify-center">
+            <Logo withWordmark size={44} />
+          </div>
+          <p className="mt-3 text-muted-foreground">
             Contanos quién sos para empezar a armar tu viaje.
           </p>
         </div>

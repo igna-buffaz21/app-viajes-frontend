@@ -1,15 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/brand/Logo";
 import { APP_ROUTES } from "@/config/app.routes";
+import { prefersReducedMotion } from "@/lib/motion";
 import { useAppAuth } from "@/modules/session/useAppAuth";
 
 import { getChatMode, setChatMode } from "../chat.config";
 import { OPCIONES_POR_CAMPO } from "../chat.options";
 import { chatService } from "../chat.service";
 import type { ChatMessage, ChatRespuesta } from "../chat.types";
+import { MessageBubble } from "../components/MessageBubble";
+import { ThinkingIndicator } from "../components/ThinkingIndicator";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -21,6 +25,15 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [messages, isSending]);
 
   async function enviar(contenido: string) {
     if (!contenido.trim() || isSending) return;
@@ -72,7 +85,7 @@ export default function ChatPage() {
       <header className="mb-4 border-b pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold">FreeVago</h1>
+            <Logo withWordmark size={30} />
             {mode === "mock" && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
                 Modo demo
@@ -108,23 +121,15 @@ export default function ChatPage() {
         )}
 
         {messages.map((message, index) => (
-          <div
+          <MessageBubble
             key={index}
-            className={
-              message.role === "usuario"
-                ? "ml-auto max-w-[85%] break-words rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground sm:max-w-[80%]"
-                : "mr-auto max-w-[85%] break-words rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap sm:max-w-[80%]"
-            }
-          >
-            {message.contenido}
-          </div>
+            role={message.role}
+            content={message.contenido}
+            onElegirPropuesta={() => enviar("Quiero elegir esta propuesta.")}
+          />
         ))}
 
-        {isSending && (
-          <div className="mr-auto max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground sm:max-w-[80%]">
-            Pensando...
-          </div>
-        )}
+        <ThinkingIndicator active={isSending} />
 
         {!isSending && ultimaRespuesta && ultimaRespuesta.preguntas.length > 0 && (
           <div className="mr-auto max-w-[85%] space-y-2 sm:max-w-[80%]">
@@ -162,6 +167,8 @@ export default function ChatPage() {
             </Button>
           </div>
         )}
+
+        <div ref={bottomRef} />
       </div>
 
       {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
