@@ -30,7 +30,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
           strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
           hr: () => <hr className="my-3 border-border" />,
           a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
+            <a href={href} target="_blank" rel="noreferrer" className="text-primary-strong underline underline-offset-2">
               {children}
             </a>
           ),

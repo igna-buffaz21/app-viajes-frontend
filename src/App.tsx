@@ -1,21 +1,11 @@
 import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@clerk/react";
 
-import { ProtectedRoute } from "./lib/protectedRoute";
-
-import LoginPage from "./modules/auth/pages/login";
 import { setupApiInterceptors } from "./lib/interceptor";
-import ShowUsers from "./modules/users/pages/showUsers.page";
 import { APP_ROUTES } from "./config/app.routes";
-import HomePage from "./modules/home/pages/Panelhome.page";
-import PanelLayout from "./components/layout/panelLayout";
 import { UnauthorizedPage } from "./modules/auth/pages/unauthorized.page";
 import { InactiveAccountPage } from "./modules/auth/pages/inactiveAccount.page";
-
-import { USER_ROLES } from "./config/const.globs";
-import AppLayout from "./components/layout/appLayout";
-import AppHomePage from "./modules/home/pages/appHome.page";
 
 import AccessPage from "./modules/session/pages/accessPage";
 import { RequireSession } from "./modules/session/RequireSession";
@@ -42,9 +32,15 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to={APP_ROUTES.auth.loginViajes} replace />} />
 
-      <Route path={APP_ROUTES.auth.login} element={<LoginPage />} />
+      {/* El producto municipal que compartía este repo (Clerk/panel/operator/app) se
+          eliminó — esta ruta ya no tiene una página propia, así que redirige al único
+          login funcional que queda. */}
+      <Route
+        path={APP_ROUTES.auth.login}
+        element={<Navigate to={APP_ROUTES.auth.loginViajes} replace />}
+      />
 
       <Route
         path={APP_ROUTES.auth.unauthorized}
@@ -56,7 +52,6 @@ function App() {
         element={<InactiveAccountPage />}
       />
 
-      {/* FreeVago: flujo nuevo, en paralelo al de arriba (municipal/Clerk) */}
       <Route path={APP_ROUTES.auth.loginViajes} element={<AccessPage />} />
 
       <Route
@@ -76,31 +71,6 @@ function App() {
           </RequireSession>
         }
       />
-
-      <Route
-        path={APP_ROUTES.panel.root}
-        element={
-          <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN, USER_ROLES.SUPERADMIN]}>
-            <PanelLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<HomePage />} />
-
-        <Route path={APP_ROUTES.panel.users} element={<ShowUsers />} />
-      </Route>
-
-      <Route
-        path={APP_ROUTES.app.root}
-        element={
-          <ProtectedRoute allowedRoles={[USER_ROLES.CITIZEN]}>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AppHomePage />} />
-        
-      </Route>
     </Routes>
   );
 }

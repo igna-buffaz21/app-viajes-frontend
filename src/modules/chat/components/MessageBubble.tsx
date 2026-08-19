@@ -12,7 +12,7 @@ interface MessageBubbleProps {
 export function MessageBubble({ role, content, onElegirPropuesta }: MessageBubbleProps) {
   if (role === "usuario") {
     return (
-      <div className="fv-msg-in ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm break-words text-primary-foreground sm:max-w-[80%]">
+      <div className="fv-msg-in fv-theme-transition ml-auto max-w-[85%] rounded-lg bg-primary px-3 py-2 text-sm break-words text-primary-foreground sm:max-w-[80%]">
         {content}
       </div>
     );
@@ -27,7 +27,7 @@ export function MessageBubble({ role, content, onElegirPropuesta }: MessageBubbl
   }
 
   return (
-    <div className="fv-msg-in mr-auto max-w-[85%] rounded-lg border border-border bg-card px-3 py-2 sm:max-w-[80%]">
+    <div className="fv-msg-in fv-theme-transition mr-auto max-w-[85%] break-words rounded-lg border border-border bg-card px-3 py-2 sm:max-w-[80%]">
       <MarkdownMessage content={content} />
     </div>
   );

@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_ROUTES } from "@/config/app.routes";
 import { Logo } from "@/components/brand/Logo";
+import { useTheme } from "@/lib/useTheme";
 
 import { useAppAuth } from "../useAppAuth";
 
 export default function AccessPage() {
   const navigate = useNavigate();
   const { loginLocal } = useAppAuth();
+  const { theme } = useTheme();
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -34,11 +36,11 @@ export default function AccessPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 sm:px-6">
+    <div className="fv-theme-transition flex min-h-screen items-center justify-center bg-background px-4 sm:px-6">
       <div className="w-full max-w-sm space-y-8 py-8">
         <div className="text-center">
           <div className="flex justify-center">
-            <Logo withWordmark size={44} />
+            <Logo withWordmark size={44} variant={theme === "dark" ? "onDark" : "default"} />
           </div>
           <p className="mt-3 text-muted-foreground">
             Contanos quién sos para empezar a armar tu viaje.

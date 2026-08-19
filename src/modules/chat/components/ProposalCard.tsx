@@ -19,7 +19,7 @@ function DayAccordionItem({ day }: { day: DayBlock }) {
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="border-b border-border last:border-b-0">
       <CollapsibleTrigger className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left">
-        <span className="flex size-7 flex-none items-center justify-center rounded-full bg-secondary font-mono text-[12px] font-medium text-primary">
+        <span className="flex size-7 flex-none items-center justify-center rounded-full bg-secondary font-mono text-[12px] font-medium text-primary-strong">
           {day.day}
         </span>
         <span className="flex-1 font-display text-sm font-semibold tracking-[-0.015em]">Día {day.day}</span>
@@ -36,11 +36,11 @@ export function ProposalCard({ proposal, onElegir }: ProposalCardProps) {
   const { title, dateRange, budget, days, introMarkdown, outroMarkdown } = proposal;
 
   return (
-    <div className="mr-auto w-full max-w-[560px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="fv-theme-transition mr-auto w-full max-w-[560px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-primary px-5 py-4">
-        <div className="font-display text-lg font-semibold tracking-[-0.02em] text-white">{title}</div>
+        <div className="font-display text-lg font-semibold tracking-[-0.02em] text-primary-foreground">{title}</div>
         {dateRange && (
-          <span className="mt-2 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11.5px] text-white">
+          <span className="mt-2 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11.5px] text-primary-foreground">
             {dateRange}
           </span>
         )}

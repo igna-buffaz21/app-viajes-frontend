@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_ROUTES } from "@/config/app.routes";
 import { prefersReducedMotion } from "@/lib/motion";
+import { useTheme } from "@/lib/useTheme";
 import { useAppAuth } from "@/modules/session/useAppAuth";
 
 import { getChatMode, setChatMode } from "../chat.config";
@@ -18,6 +20,7 @@ import { ThinkingIndicator } from "../components/ThinkingIndicator";
 export default function ChatPage() {
   const navigate = useNavigate();
   const { user, logout } = useAppAuth();
+  const { theme } = useTheme();
 
   const [mode, setMode] = useState(getChatMode());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -81,18 +84,19 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col p-3 sm:p-4">
-      <header className="mb-4 border-b pb-3">
+    <div className="fv-theme-transition mx-auto flex min-h-screen w-full max-w-2xl flex-col p-3 sm:p-4">
+      <header className="fv-theme-transition mb-4 border-b pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <Logo withWordmark size={30} />
+            <Logo withWordmark size={30} variant={theme === "dark" ? "onDark" : "default"} />
             {mode === "mock" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                 Modo demo
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={handleToggleMode}>
               {mode === "real" ? "Probar modo demo" : "Volver a modo real"}
             </Button>
@@ -137,7 +141,7 @@ export default function ChatPage() {
               const opciones = OPCIONES_POR_CAMPO[pregunta.campo];
 
               return (
-                <div key={pregunta.campo} className="rounded-lg border bg-background p-2">
+                <div key={pregunta.campo} className="fv-theme-transition rounded-lg border bg-background p-2">
                   <p className="text-sm">{pregunta.pregunta}</p>
                   {opciones && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -160,7 +164,7 @@ export default function ChatPage() {
         )}
 
         {!isSending && ultimaRespuesta?.estado === "listoParaBuscar" && (
-          <div className="mr-auto max-w-[85%] rounded-lg border bg-background p-3 sm:max-w-[80%]">
+          <div className="fv-theme-transition mr-auto max-w-[85%] rounded-lg border bg-background p-3 sm:max-w-[80%]">
             <p className="mb-2 text-sm">Ya tenemos lo necesario para buscar tu viaje.</p>
             <Button size="sm" className="h-11" onClick={handleVerResultados}>
               Ver resultados

@@ -40,6 +40,7 @@
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+    --color-primary-strong: var(--primary-strong);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
     --color-card-foreground: var(--card-foreground);
@@ -64,6 +65,7 @@
     --popover-foreground: #1C2422;
     --primary: #12414F;
     --primary-foreground: #FFFFFF;
+    --primary-strong: #12414F;
     --primary-soft: #EDF2F3;
     --secondary: #EDF2F3;
     --secondary-foreground: #12414F;
@@ -93,24 +95,27 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: #12171A;
+    --foreground: #EDEFEC;
+    --card: #171D20;
+    --card-foreground: #EDEFEC;
+    --popover: #171D20;
+    --popover-foreground: #EDEFEC;
+    --primary: #1B5A6B;
+    --primary-foreground: #FFFFFF;
+    --primary-strong: #5FA8BC;
+    --primary-soft: #1E2E33;
+    --secondary: #1E2E33;
+    --secondary-foreground: #EDEFEC;
+    --muted: #1E2E33;
+    --muted-foreground: #9BA6A2;
+    --accent: #E8955C;
+    --accent-foreground: #1C2422;
+    --accent-soft: #2E2119;
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --border: #2A312E;
+    --input: #2A312E;
+    --ring: #E8955C;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -173,4 +178,23 @@
   .fv-indicator-in,
   .fv-indicator-out,
   .fv-msg-in { animation: none; }
+}
+
+/* ——— FreeVago: transición suave al cambiar de tema ——— */
+body {
+  transition-property: background-color, color;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+.fv-theme-transition {
+  transition-property: background-color, border-color, color;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

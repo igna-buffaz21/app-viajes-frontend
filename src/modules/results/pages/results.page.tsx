@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_ROUTES } from "@/config/app.routes";
 import type { PerfilViaje } from "@/modules/chat/chat.types";
 
@@ -36,15 +37,18 @@ export default function ResultsPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 p-3 sm:p-4">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+    <div className="fv-theme-transition mx-auto w-full max-w-3xl space-y-6 p-3 sm:p-4">
+      <header className="fv-theme-transition flex flex-wrap items-center justify-between gap-2 border-b pb-3">
         <h1 className="text-lg font-bold">Tu viaje</h1>
-        <Button variant="ghost" size="sm" asChild>
-          <Link to={APP_ROUTES.chat.root}>Volver al chat</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button variant="ghost" size="sm" asChild>
+            <Link to={APP_ROUTES.chat.root}>Volver al chat</Link>
+          </Button>
+        </div>
       </header>
 
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+      <div className="fv-theme-transition rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
         <strong>Datos de ejemplo.</strong> El backend de búsqueda de vuelos, hoteles y
         actividades todavía no existe (ver <code>AUDITORIA_BACKEND.md</code>). Esto es un
         fixture con la forma real que se espera que tenga cuando exista.
@@ -58,7 +62,7 @@ export default function ResultsPage() {
             <h2 className="text-base font-semibold">Vuelos</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {resultados.vuelos.map((vuelo, i) => (
-                <div key={i} className="rounded-lg border p-3">
+                <div key={i} className="fv-theme-transition rounded-lg border p-3">
                   <p className="text-lg font-bold">{formatPrecio(vuelo.precio)}</p>
                   {vuelo.legs.map((leg, j) => (
                     <p key={j} className="mt-1 text-xs text-muted-foreground">
@@ -74,7 +78,7 @@ export default function ResultsPage() {
             <h2 className="text-base font-semibold">Hoteles</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {resultados.hoteles.map((hotel, i) => (
-                <div key={i} className="rounded-lg border p-3">
+                <div key={i} className="fv-theme-transition rounded-lg border p-3">
                   <p className="font-medium">{hotel.nombre}</p>
                   <p className="mt-1 text-sm">{formatPrecio(hotel.precio)}</p>
                   {hotel.rating !== null && (
@@ -89,7 +93,7 @@ export default function ResultsPage() {
             <h2 className="text-base font-semibold">Actividades</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {resultados.actividades.map((actividad, i) => (
-                <div key={i} className="rounded-lg border p-3">
+                <div key={i} className="fv-theme-transition rounded-lg border p-3">
                   <p className="font-medium">{actividad.titulo}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {actividad.descripcionBreve}
@@ -113,7 +117,7 @@ export default function ResultsPage() {
               ].map((titulo) => (
                 <div
                   key={titulo}
-                  className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground"
+                  className="fv-theme-transition rounded-lg border border-dashed p-3 text-sm text-muted-foreground"
                 >
                   {titulo}
                 </div>
