@@ -1,13 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/inter";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-heading: var(--font-display);
+    --font-display: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+    --font-sans: 'Inter Variable', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,10 +30,12 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-accent-soft: var(--accent-soft);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
+    --color-primary-soft: var(--primary-soft);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-secondary: var(--secondary);
     --color-primary-foreground: var(--primary-foreground);
@@ -49,30 +56,32 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --background: #F7F8F7;
+    --foreground: #1C2422;
+    --card: #FFFFFF;
+    --card-foreground: #1C2422;
+    --popover: #FFFFFF;
+    --popover-foreground: #1C2422;
+    --primary: #12414F;
+    --primary-foreground: #FFFFFF;
+    --primary-soft: #EDF2F3;
+    --secondary: #EDF2F3;
+    --secondary-foreground: #12414F;
+    --muted: #EDF2F3;
+    --muted-foreground: #6B7975;
+    --accent: #E8955C;
+    --accent-foreground: #1C2422;
+    --accent-soft: #FBF0E7;
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --border: #E4E7E3;
+    --input: #E4E7E3;
+    --ring: #E8955C;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+    --radius: 0.875rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -127,4 +136,41 @@
   html {
     @apply font-sans;
     }
+}
+
+/* ——— FreeVago: animación "pensando" y transiciones de mensaje ———
+   Valores tomados 1:1 de animacion-chat/.../FreeVago - Marca y espera.html */
+@keyframes fv-plane-glide {
+  0% { transform: translate(-7px, 2.5px) rotate(-3.2deg); }
+  50% { transform: translate(7px, -3.5px) rotate(2.6deg); }
+  100% { transform: translate(-7px, 2.5px) rotate(-3.2deg); }
+}
+@keyframes fv-cloud-near { from { transform: translateX(5px); } to { transform: translateX(-7px); } }
+@keyframes fv-cloud-far { from { transform: translateX(3px); } to { transform: translateX(-4px); } }
+@keyframes fv-trail { 0%, 100% { stroke-opacity: .12; } 50% { stroke-opacity: .42; } }
+@keyframes fv-rest-pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes fv-indicator-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes fv-indicator-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.96); } }
+@keyframes fv-msg-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+.fv-thinker-plane {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fv-plane-glide 2.6s cubic-bezier(.37,0,.63,1) infinite;
+}
+.fv-thinker-cloud-near { animation: fv-cloud-near 5.2s cubic-bezier(.37,0,.63,1) infinite alternate; }
+.fv-thinker-cloud-far { animation: fv-cloud-far 7s cubic-bezier(.37,0,.63,1) infinite alternate; }
+.fv-thinker-trail { animation: fv-trail 2.6s cubic-bezier(.37,0,.63,1) infinite; }
+.fv-indicator-in { animation: fv-indicator-in .25s cubic-bezier(.16,1,.3,1) both; }
+.fv-indicator-out { animation: fv-indicator-out .2s ease-in both; }
+.fv-msg-in { animation: fv-msg-in .2s cubic-bezier(.16,1,.3,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fv-thinker-plane { animation: fv-rest-pulse 2.6s ease-in-out infinite; }
+  .fv-thinker-cloud-near,
+  .fv-thinker-cloud-far,
+  .fv-thinker-trail { animation: none; }
+  .fv-indicator-in,
+  .fv-indicator-out,
+  .fv-msg-in { animation: none; }
 }
