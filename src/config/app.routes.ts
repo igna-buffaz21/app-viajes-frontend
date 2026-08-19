@@ -3,6 +3,15 @@ export const APP_ROUTES = {
     login: "/login",
     unauthorized: "/unauthorized",
     inactive: "/inactive",
+    loginViajes: "/login-viajes",
+  },
+
+  chat: {
+    root: "/chat",
+  },
+
+  resultados: {
+    root: "/resultados",
   },
 
   panel: {

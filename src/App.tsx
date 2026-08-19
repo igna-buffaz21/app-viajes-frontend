@@ -17,6 +17,11 @@ import { USER_ROLES } from "./config/const.globs";
 import AppLayout from "./components/layout/appLayout";
 import AppHomePage from "./modules/home/pages/appHome.page";
 
+import AccessPage from "./modules/session/pages/accessPage";
+import { RequireSession } from "./modules/session/RequireSession";
+import ChatPage from "./modules/chat/pages/chat.page";
+import ResultsPage from "./modules/results/pages/results.page";
+
 function App() {
   const { getToken, isLoaded } = useAuth();
   const [isApiReady, setIsApiReady] = useState(false);
@@ -49,6 +54,27 @@ function App() {
       <Route
         path={APP_ROUTES.auth.inactive}
         element={<InactiveAccountPage />}
+      />
+
+      {/* FreeVago: flujo nuevo, en paralelo al de arriba (municipal/Clerk) */}
+      <Route path={APP_ROUTES.auth.loginViajes} element={<AccessPage />} />
+
+      <Route
+        path={APP_ROUTES.chat.root}
+        element={
+          <RequireSession>
+            <ChatPage />
+          </RequireSession>
+        }
+      />
+
+      <Route
+        path={APP_ROUTES.resultados.root}
+        element={
+          <RequireSession>
+            <ResultsPage />
+          </RequireSession>
+        }
       />
 
       <Route

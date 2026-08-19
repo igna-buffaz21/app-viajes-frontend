@@ -23,4 +23,8 @@ export const API_ROUTES = {
     create: "/incidents",
     update: (id: string) => `/incidents/${id}`,
   },
+
+  travelPlans: {
+    generar: "/travel-plans/generar",
+  },
 } as const;
