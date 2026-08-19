@@ -1,11 +1,14 @@
-// TODO(glosario compartido): estos nombres de campo (price, legs, rawText,
-// name, rating, precioPorPersona, etc.) son el ejemplo tal cual lo dio el
-// encargo original, no un contrato confirmado por MicroServicioGrupo1 (MS1)
-// — hoy MS1 ni siquiera expone este endpoint (ver AUDITORIA_BACKEND.md,
-// sección 2). Cuando se cierre el glosario compartido de campos entre front
-// y backend, es probable que estos nombres cambien; ajustar acá y en
-// results.mapper.ts cuando eso pase, sin tocar los tipos limpios de más
-// abajo ni los componentes visuales.
+// TODO(glosario compartido, ver GLOSARIO_DOMINIO.md): estos nombres de campo
+// (price, legs, rawText, name, rating, precioPorPersona, etc.) son el
+// ejemplo tal cual lo dio el encargo original — NO son el contrato real de
+// ningún servicio. Según el glosario, esta data en producción sale de MS2
+// "Scraping" (`scrapingResult`, vuelos/hoteles/actividades crudos) y termina
+// armada por MS3 "Armado" en una `propuesta` (destino + vuelo + hospedaje +
+// actividades + `precioEstimado`) — ninguno de los dos existe en código
+// todavía. El glosario marca ambos nombres como "a definir", así que estos
+// tipos Raw* van a cambiar cuando se cierren. Cuando eso pase, ajustar acá y
+// en results.mapper.ts, sin tocar los tipos limpios de más abajo (Vuelo,
+// Hotel, Actividad, Precio) ni los componentes visuales.
 export interface RawVueloLeg {
   time: string;
   airline: string;

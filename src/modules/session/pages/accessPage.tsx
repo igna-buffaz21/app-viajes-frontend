@@ -33,8 +33,8 @@ export default function AccessPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-sm space-y-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 sm:px-6">
+      <div className="w-full max-w-sm space-y-8 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight">FreeVago</h1>
           <p className="mt-2 text-muted-foreground">
@@ -47,6 +47,7 @@ export default function AccessPage() {
             <Label htmlFor="nombre">Nombre</Label>
             <Input
               id="nombre"
+              className="h-11"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               required
@@ -59,6 +60,7 @@ export default function AccessPage() {
             <Input
               id="email"
               type="email"
+              className="h-11"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -67,7 +69,7 @@ export default function AccessPage() {
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
             {isSubmitting ? "Ingresando..." : "Empezar a planificar"}
           </Button>
         </form>

@@ -10,13 +10,17 @@ import type {
   Vuelo,
 } from "./results.types";
 
-// TODO(glosario compartido): este mapper asume los nombres de campo del raw
-// contract tal cual figuran en results.types.ts (RawVueloOpcion, RawHotelOpcion,
-// RawActividadOpcion) — no confirmados por MS1, sujetos a cambiar cuando se
-// cierre el glosario compartido de campos entre front y backend. Si cambian,
-// el ajuste es acá adentro (parsePrecio/parseRating/map*); los tipos limpios
-// (Vuelo/Hotel/Actividad/Precio) y los componentes visuales no deberían
-// necesitar tocarse.
+// TODO(glosario compartido, ver GLOSARIO_DOMINIO.md): este mapper asume los
+// nombres de campo de results.types.ts (RawVueloOpcion, RawHotelOpcion,
+// RawActividadOpcion), que son un ejemplo del encargo original, no el
+// contrato real de MS2 (`scrapingResult`) ni de MS3 (`propuesta`) — ambos
+// "a definir" según el glosario. Cuando se cierren, el ajuste es acá adentro
+// (parsePrecio/parseRating/map*); los tipos limpios (Vuelo/Hotel/Actividad/
+// Precio) y los componentes visuales no deberían necesitar tocarse.
+// Ojo al mapear el contrato real cuando llegue: el glosario distingue
+// `destino` (ciudad) de `destination` (IATA), `origen` de `origin` (IATA,
+// puede ser lista), y `precio` (ítem suelto) de `precioEstimado` (total de
+// una propuesta) — no son sinónimos.
 
 /**
  * Heurística de moneda: el ejemplo real del encargo mezcla precios "chicos"

@@ -36,8 +36,8 @@ export default function ResultsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4">
-      <header className="flex items-center justify-between border-b pb-3">
+    <div className="mx-auto w-full max-w-3xl space-y-6 p-3 sm:p-4">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
         <h1 className="text-lg font-bold">Tu viaje</h1>
         <Button variant="ghost" size="sm" asChild>
           <Link to={APP_ROUTES.chat.root}>Volver al chat</Link>

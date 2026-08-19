@@ -68,10 +68,10 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col p-4">
+    <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col p-3 sm:p-4">
       <header className="mb-4 border-b pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold">FreeVago</h1>
             {mode === "mock" && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
@@ -79,7 +79,7 @@ export default function ChatPage() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="ghost" size="sm" onClick={handleToggleMode}>
               {mode === "real" ? "Probar modo demo" : "Volver a modo real"}
             </Button>
@@ -100,7 +100,7 @@ export default function ChatPage() {
         </p>
       </header>
 
-      <div className="flex-1 space-y-3 overflow-y-auto py-2">
+      <div className="min-w-0 flex-1 space-y-3 overflow-y-auto py-2">
         {messages.length === 0 && (
           <p className="text-sm text-muted-foreground">
             Contanos cuándo, con quién y con qué presupuesto querés viajar.
@@ -112,8 +112,8 @@ export default function ChatPage() {
             key={index}
             className={
               message.role === "usuario"
-                ? "ml-auto max-w-[80%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
-                : "mr-auto max-w-[80%] rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap"
+                ? "ml-auto max-w-[85%] break-words rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground sm:max-w-[80%]"
+                : "mr-auto max-w-[85%] break-words rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap sm:max-w-[80%]"
             }
           >
             {message.contenido}
@@ -121,13 +121,13 @@ export default function ChatPage() {
         ))}
 
         {isSending && (
-          <div className="mr-auto max-w-[80%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <div className="mr-auto max-w-[85%] rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground sm:max-w-[80%]">
             Pensando...
           </div>
         )}
 
         {!isSending && ultimaRespuesta && ultimaRespuesta.preguntas.length > 0 && (
-          <div className="mr-auto max-w-[80%] space-y-2">
+          <div className="mr-auto max-w-[85%] space-y-2 sm:max-w-[80%]">
             {ultimaRespuesta.preguntas.map((pregunta) => {
               const opciones = OPCIONES_POR_CAMPO[pregunta.campo];
 
@@ -155,9 +155,9 @@ export default function ChatPage() {
         )}
 
         {!isSending && ultimaRespuesta?.estado === "listoParaBuscar" && (
-          <div className="mr-auto max-w-[80%] rounded-lg border bg-background p-3">
+          <div className="mr-auto max-w-[85%] rounded-lg border bg-background p-3 sm:max-w-[80%]">
             <p className="mb-2 text-sm">Ya tenemos lo necesario para buscar tu viaje.</p>
-            <Button size="sm" onClick={handleVerResultados}>
+            <Button size="sm" className="h-11" onClick={handleVerResultados}>
               Ver resultados
             </Button>
           </div>
@@ -168,12 +168,13 @@ export default function ChatPage() {
 
       <form onSubmit={handleSubmit} className="flex gap-2 border-t pt-3">
         <Input
+          className="h-11 min-w-0 flex-1"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Escribí tu mensaje..."
           disabled={isSending}
         />
-        <Button type="submit" disabled={isSending || !input.trim()}>
+        <Button type="submit" className="h-11" disabled={isSending || !input.trim()}>
           Enviar
         </Button>
       </form>

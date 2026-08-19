@@ -29,11 +29,12 @@ Fecha: 2026-08-18. Auditoría de código real, sin modificar nada dentro de `Mic
   - No hay persistencia de un objeto `viaje` acumulado entre turnos. Cada llamada a `generar` es un evento aislado; no hay noción de "conversación en curso".
   - `respuesta` no es JSON parseable de forma confiable — es lo que Gemini devuelva en texto libre para ese prompt de una línea.
 
-### Gap crítico: el endpoint de búsqueda (contrato C del prompt) NO existe
+### El endpoint de búsqueda (contrato C del prompt) NO existe — actualización tras leer GLOSARIO_DOMINIO.md
 
 - No hay ninguna ruta, service ni modelo relacionado con `vuelos`, `hoteles`, `actividades`, scraping, ni nada que produzca la forma de `resultados.vuelos/hoteles/actividades` del contrato C.
 - No hay integración con ningún proveedor de vuelos/hoteles/actividades en el código (no hay llamadas HTTP externas salvo a Gemini).
-- Conclusión: **hoy no hay forma de disparar una búsqueda real de propuestas de viaje** contra este backend. Es 100% inexistente, no solo "crudo".
+- **Corrección de framing:** esto se documentó originalmente como "gap crítico" de MicroServicioGrupo2, tratándolo como algo que a este repo le debería faltar. Con `GLOSARIO_DOMINIO.md` (arquitectura de los 3 grupos) ahora se sabe que **no es así**: `MicroServicioGrupo2` es MS1 "Encuesta", cuya responsabilidad es solo el perfil de viaje conversacional. La búsqueda/scraping es responsabilidad de MS2 "Scraping" y el armado final de propuestas (`propuesta`, con `precioEstimado`) de MS3 "Armado" — ninguno de los dos existe en código todavía, en ningún ambiente accesible. No es un bug de MS1: es un servicio que a esta fecha todavía no se construyó, corriente abajo en la cadena `MS1 → MS2 → MS3 → Frontend`.
+- Conclusión (sigue vigente): **hoy no hay forma de disparar una búsqueda real de propuestas de viaje**, venga de MS1, MS2 o MS3 — por eso `modules/results/` de este front sigue siendo 100% mock (ver `results.mock.ts`), con nombres de campo de ejemplo (no el `scrapingResult`/`propuesta` reales, todavía "a definir" según el glosario).
 
 ## 3. Persistencia
 
