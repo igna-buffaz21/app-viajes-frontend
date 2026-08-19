@@ -10,9 +10,9 @@ import { getRedirectPathByRole } from "../auth.utils";
 function LoginPage() {
   const navigate = useNavigate();
 
-  const { isLoaded, isSignedIn, getToken, signOut } = useAuth();
+  const { isLoaded, isSignedIn, signOut } = useAuth();
 
-  const [userData, setUserData] = useState<AuthUserResponse | null>(null);
+  const [, setUserData] = useState<AuthUserResponse | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
