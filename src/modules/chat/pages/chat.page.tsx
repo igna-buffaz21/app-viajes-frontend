@@ -11,7 +11,7 @@ import { useTheme } from "@/lib/useTheme";
 import { useAppAuth } from "@/modules/session/useAppAuth";
 
 import { getChatMode, setChatMode } from "../chat.config";
-import { OPCIONES_POR_CAMPO } from "../chat.options";
+import { QuestionCard } from "../components/QuestionCard";
 import { chatService } from "../chat.service";
 import type { ChatMessage, ChatRespuesta } from "../chat.types";
 import { MessageBubble } from "../components/MessageBubble";
@@ -137,29 +137,9 @@ export default function ChatPage() {
 
         {!isSending && ultimaRespuesta && ultimaRespuesta.preguntas.length > 0 && (
           <div className="mr-auto max-w-[85%] space-y-2 sm:max-w-[80%]">
-            {ultimaRespuesta.preguntas.map((pregunta) => {
-              const opciones = OPCIONES_POR_CAMPO[pregunta.campo];
-
-              return (
-                <div key={pregunta.campo} className="fv-theme-transition rounded-lg border bg-background p-2">
-                  <p className="text-sm">{pregunta.pregunta}</p>
-                  {opciones && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {opciones.map((opcion) => (
-                        <button
-                          key={opcion}
-                          type="button"
-                          onClick={() => enviar(opcion)}
-                          className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
-                        >
-                          {opcion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {ultimaRespuesta.preguntas.map((pregunta, index) => (
+              <QuestionCard key={`${pregunta.campo}-${index}`} pregunta={pregunta} onResponder={enviar} />
+            ))}
           </div>
         )}
 

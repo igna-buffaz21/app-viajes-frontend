@@ -70,6 +70,8 @@ function extraerPerfil(texto: string): PerfilViaje {
   if (/\bmonta[ñn]a\b/.test(t)) intereses.push("montaña");
   if (/\bnaturaleza\b/.test(t)) intereses.push("naturaleza");
   if (/\bcultura\b/.test(t)) intereses.push("cultura");
+  if (/\bgastronomia\b/.test(t)) intereses.push("gastronomia");
+  if (/\bvida\s+nocturna\b/.test(t)) intereses.push("vida nocturna");
 
   if (clima.length || intereses.length) {
     perfil.preferencias = { ...perfil.preferencias, clima, intereses, tipoViaje: intereses };
@@ -138,6 +140,14 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "preferencias.ritmoViaje",
       pregunta: "¿Cómo te gustaría que sea el ritmo del viaje?",
       motivo: "Ayuda a elegir actividades acordes (tranquilo, equilibrado o intenso).",
+    },
+  },
+  {
+    faltaSi: (p) => !p.preferencias?.intereses?.length,
+    pregunta: {
+      campo: "preferencias.intereses",
+      pregunta: "¿Qué tipo de experiencias te interesan?",
+      motivo: "Ayuda a priorizar actividades y destinos que encajen con tus gustos.",
     },
   },
 ];
