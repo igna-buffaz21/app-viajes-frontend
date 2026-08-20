@@ -3,10 +3,18 @@
  * Heurística FRÁGIL para detectar y extraer la "propuesta final" de viaje a
  * partir del markdown en texto libre que devuelve MS1 (Gemini). MS1 no
  * expone un contrato estructurado para esto — solo prosa con formato
- * reconocible (tabla de presupuesto + días "Día N"). Si el día de mañana
- * MS1 empieza a devolver JSON real, este archivo es el que se reemplaza o
- * se elimina: el resto del chat solo depende de `isFinalProposal` y
- * `parseFinalProposal`, nunca de los detalles internos de acá.
+ * reconocible (tabla de presupuesto + días "Día N"). Si esto se reconecta en
+ * el futuro (ver nota de desconexión abajo) y el día de mañana MS1 empieza a
+ * devolver JSON real, este archivo es el que se reemplaza o se elimina: el
+ * resto del chat dependería solo de `isFinalProposal` y `parseFinalProposal`,
+ * nunca de los detalles internos de acá.
+ *
+ * DESCONECTADO del flujo de chat (corrección de alcance 2026-08-19): MS1
+ * solo debe conversar y frenar en "listoParaBuscar", nunca recomendar
+ * destinos ni armar un itinerario — eso es de MS2/MS3. Nada en
+ * `MessageBubble` llama a este archivo hoy. Queda vivo para la futura
+ * pantalla de resultados reales, cuando MS3 exista y produzca una
+ * `propuesta` (ver GLOSARIO_DOMINIO.md) con forma similar a esta.
  */
 
 export interface BudgetRow {

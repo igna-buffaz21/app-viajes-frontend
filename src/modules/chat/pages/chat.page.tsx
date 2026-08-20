@@ -125,12 +125,7 @@ export default function ChatPage() {
         )}
 
         {messages.map((message, index) => (
-          <MessageBubble
-            key={index}
-            role={message.role}
-            content={message.contenido}
-            onElegirPropuesta={() => enviar("Quiero elegir esta propuesta.")}
-          />
+          <MessageBubble key={index} role={message.role} content={message.contenido} />
         ))}
 
         <ThinkingIndicator active={isSending} />

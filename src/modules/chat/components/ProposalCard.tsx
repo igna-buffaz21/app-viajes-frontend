@@ -1,3 +1,7 @@
+// Desconectado del flujo de chat (corrección de alcance 2026-08-19): MS1 no
+// debe producir "propuestas finales", eso es de MS2/MS3. Nada importa este
+// componente hoy — queda para la futura pantalla de resultados reales.
+
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
