@@ -16,6 +16,7 @@ import { chatService } from "../chat.service";
 import type { ChatMessage, ChatRespuesta } from "../chat.types";
 import { MessageBubble } from "../components/MessageBubble";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
+import { SurveySummary } from "../components/SurveySummary";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -138,11 +139,16 @@ export default function ChatPage() {
           </div>
         )}
 
-        {!isSending && ultimaRespuesta?.estado === "listoParaBuscar" && (
+        {!isSending && ultimaRespuesta && ultimaRespuesta.estado === "listoParaBuscar" && (
           <div className="fv-theme-transition mr-auto max-w-[85%] rounded-lg border bg-background p-3 sm:max-w-[80%]">
-            <p className="mb-2 text-sm">Ya tenemos lo necesario para buscar tu viaje.</p>
+            <p className="text-sm font-medium">Encuesta completa</p>
+            <SurveySummary viaje={ultimaRespuesta.viaje} />
+            <p className="mt-3 mb-2 text-sm text-muted-foreground">
+              Buscando las mejores opciones para vos... (próximamente — hoy la pantalla de resultados
+              muestra datos de ejemplo, ver AUDITORIA_BACKEND.md)
+            </p>
             <Button size="sm" className="h-11" onClick={handleVerResultados}>
-              Ver resultados
+              Ver resultados de ejemplo
             </Button>
           </div>
         )}
