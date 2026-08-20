@@ -90,9 +90,13 @@ export default function ChatPage() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <Logo withWordmark size={30} variant={theme === "dark" ? "onDark" : "default"} />
-            {mode === "mock" && (
+            {mode === "mock" ? (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                Modo demo
+                Modo demo (recomendado para mostrar)
+              </span>
+            ) : (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">
+                Modo real (backend fuera de contrato)
               </span>
             )}
           </div>
