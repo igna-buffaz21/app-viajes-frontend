@@ -99,3 +99,36 @@ Con ambos esquivados, la respuesta de Gemini llega completa y coherente, incorpo
 ## 9. Nota sobre el frontend existente (afecta directamente el punto 2.2 del encargo)
 
 `app-viajes-frontend` no es un esqueleto neutro: es el frontend de **otra app** (gestión de incidentes municipales — roles `superadmin/admin/operator/citizen`, rutas `panel/operator/app`, entidades `municipalities/incidents`), ya completamente wireado a **Clerk** (`ClerkProvider` en `main.tsx`, `useAuth`/`getToken` en `App.tsx`, interceptor de axios que inyecta el JWT de Clerk, `protectedRoute.tsx` que redirige según `isSignedIn`/rol, y `authService.getAuth()` que llama a `GET /auth/me` — endpoint que tampoco existe en este backend). No hay ni un componente de chat ni una pantalla de resultados de viaje: cero código relacionado a "viaje", "chat", "vuelo", "hotel" en todo `src/`. El "diseño de referencia en Claude Design" mencionado en el encargo no está en el repo (no hay mockups, ni archivos de diseño, ni componentes de chat/resultados).
+
+## 10. Bug real: `crearPromptTravelPlan` borrada por una edición local sin commitear — 500 en `/api/travel-plans/generar` (RESUELTO)
+
+**Fecha: 2026-08-19/20.** Reportado como "el chat en modo real tira 500 al mandar un mensaje". No era el prompt viejo de matching/catálogo que se sospechaba en un principio — era peor: una edición local sin commitear que dejó el archivo del prompt sin ninguna función exportada.
+
+**Causa raíz, confirmada con `git diff`/`git log` en `MicroServicioGrupo2` (solo lectura, sin tocar nada):**
+- El HEAD commiteado en ese momento (`d7f209a`, "se agrego prompt ia") tenía intacta la función real `export function crearPromptTravelPlan(promptUsuario: string)` en `promtIA.model.ts:1-3`, con el prompt viejo de "matching contra catálogo de la agencia" pegado abajo como comentario muerto (ver punto 8, tercer ítem — eso sigue vigente, ese comentario no se tocó).
+- Pero el **working tree tenía un cambio local sin commitear** en ese mismo archivo: alguien reemplazó el comentario muerto viejo por uno nuevo (correctamente encaminado hacia el contrato de perfil de viaje progresivo — "construir progresivamente el perfil, sin recomendar destinos todavía", coincide con lo que ya usa `chat.mock.adapter.ts` de este front) — pero **en el proceso borró por completo la función `crearPromptTravelPlan`**. El archivo entero (461 líneas) quedó siendo un solo bloque `/** ... */`, sin un solo `export`.
+- Como el script `dev` de `MicroServicioGrupo2` corre `ts-node-dev --respawn --transpile-only`, no hay chequeo de tipos — el import roto en `travelPlan.service.ts:2` nunca se detectó hasta el primer POST en runtime.
+
+**Reproducción:** se levantó el backend local (`npm run dev`, con el cambio sin commitear todavía en el working tree) y se mandó el mismo POST que hace el front (`{"prompt": "..."}` a `/api/travel-plans/generar`). Devolvió 500. El stack trace real (visible en el *body* de la respuesta HTTP, no en la consola del server — `index.ts` no tiene middleware de error propio, así que Express 5 usa su handler default y filtra el stack crudo):
+
+```
+TypeError: (0 , promtIA_model_1.crearPromptTravelPlan) is not a function
+    at TravelPlanService.generarDesdePrompt (travelPlan.service.ts:36:47)
+    at generarDesdePrompt (travelPlan.controller.ts:42:50)
+```
+
+**Causa descartada:** el `GEMINI_MODEL` deprecado (punto 9bis, ítem 2) seguía sin estar seteado en `.env`, pero **no era la causa de este 500 en particular** — el código explota en `travelPlan.service.ts:36` (la llamada a `crearPromptTravelPlan`), antes de llegar a la línea 37 donde se resuelve el modelo. Es un segundo problema, independiente, que solo se manifestaría después de resolver este.
+
+**Frontend descartado como causa:** se revisó `chat.real.adapter.ts` — body (`{ prompt }`), endpoint (`/api/travel-plans/generar` vía proxy de Vite) y headers coinciden exactamente con lo que espera el controller. Nada para arreglar del lado del front.
+
+**Estado: RESUELTO.** El dueño del cambio revirtió manualmente su edición local (working tree volvió a `d7f209a` limpio, sin cambios sin commitear). Se reprodujo el mismo POST contra ese estado y devolvió `201` con una respuesta completa de Gemini — confirmado sin tocar nada del backend.
+
+## 11. Pendientes para próxima sesión (sin resolver todavía)
+
+Notados durante la QA en modo mock del 2026-08-20, ninguno bloquea nada hoy — quedan documentados para retomar:
+
+**(a) Las regex de `chat.mock.adapter.ts` no toleran fraseo natural del usuario — riesgo real en una demo en vivo.** `extraerPerfil` depende de patrones rígidos (`el <día> de <mes>`, `salimos desde X`, `somos N`, etc.). Frases perfectamente naturales y razonables no matchean: por ejemplo "estamos en villa maria cordoba" (en vez de "salimos desde villa maria cordoba") no seteó `lugarSalida`, y "el mes que viene" no seteó `fechaSalida` (la regex exige un día numérico explícito, no fechas relativas). Si alguien improvisa texto libre en una demo en vivo en vez de seguir un guion ensayado, el mock puede quedarse repitiendo la misma pregunta sin avanzar, lo cual se ve mal frente a audiencia. No se tocó nada todavía — decidir si vale la pena flexibilizar las regex antes de la próxima demo en vivo, o si alcanza con seguir un guion de preguntas/respuestas ensayado.
+
+**(b) Decidir si el mock debe preguntar los campos enum que hoy quedan sin uso.** `chat.options.ts`/`QuestionCard` soportan chips para `socializar`, `vidaNocturna`, `naturaleza`, `gastronomia`, `cultura` y los campos de `transporte.vuelo` — pero `PREGUNTAS_CANDIDATAS` en `chat.mock.adapter.ts` nunca los incluye como pregunta candidata, así que esos chips **nunca se muestran en modo demo hoy**, aunque el código que los renderiza funciona (confirmado con `ritmoViaje` e `intereses`, que sí están en la lista de candidatas). Es una decisión de producto/alcance, no un bug: ¿vale la pena sumarlos a `PREGUNTAS_CANDIDATAS` para que el modo demo muestre la variedad completa de chips, o se deja así hasta que MS1 real los pregunte?
+
+**(c) Bug preexistente en `extraerPerfil`: no reconoce "dólares" con tilde.** En `chat.mock.adapter.ts`, el regex de presupuesto captura tanto `dolares` como `dólares`, pero la resolución de moneda inmediatamente después solo chequea `presupuesto[2].startsWith("dolar")` (sin tilde) — así que si el usuario escribe "dólares" (con tilde), el monto se extrae bien pero la moneda cae al `else` final y queda mal seteada como `"ARS"` en vez de `"USD"`. Preexistente a este plan (no se tocó `extraerPerfil` salvo agregar las dos líneas de `gastronomia`/`vida nocturna` documentadas en el commit `feat: encuesta con chips...`). No se tocó todavía.
