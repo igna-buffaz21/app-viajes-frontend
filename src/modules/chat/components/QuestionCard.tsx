@@ -4,16 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-import { OPCIONES_POR_CAMPO } from "../chat.options";
+import { resolverOpciones } from "../chat.options";
 import type { PreguntaPerfil } from "../chat.types";
 
 interface QuestionCardProps {
   pregunta: PreguntaPerfil;
   onResponder: (texto: string) => void;
+  camposFaltantesImportantes?: string[];
 }
 
-export function QuestionCard({ pregunta, onResponder }: QuestionCardProps) {
-  const config = OPCIONES_POR_CAMPO[pregunta.campo];
+export function QuestionCard({ pregunta, onResponder, camposFaltantesImportantes }: QuestionCardProps) {
+  const config = resolverOpciones(pregunta.campo, camposFaltantesImportantes);
   const otroPanelId = `otro-panel-${pregunta.campo}`;
 
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
