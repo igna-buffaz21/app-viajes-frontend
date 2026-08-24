@@ -4,16 +4,18 @@ import { useAuth } from "@clerk/react";
 
 import { APP_ROUTES } from "@/config/app.routes";
 import { useAuthUser } from "@/modules/auth/auth.context";
-import type { AuthUserResponse } from "@/modules/auth/auth.types";
-
-type UserRole = AuthUserResponse["role"];
 
 type ProtectedRouteProps = {
   children: ReactNode;
-  allowedRoles?: UserRole[];
 };
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+/**
+ * Mecanismo genérico de auth-gating por sesión de Clerk (isSignedIn + cuenta
+ * activa). El producto municipal que usaba esto con gating por rol
+ * (allowedRoles) se eliminó junto con sus rutas — ninguna ruta usa este
+ * componente hoy, se deja como mecanismo reutilizable para lo que venga.
+ */
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
 
   const { isLoaded, isSignedIn } = useAuth();
@@ -39,10 +41,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if (user.status !== "active") {
     return <Navigate to={APP_ROUTES.auth.inactive} replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to={APP_ROUTES.auth.unauthorized} replace />;
   }
 
   return <>{children}</>;

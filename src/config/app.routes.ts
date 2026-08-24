@@ -3,25 +3,14 @@ export const APP_ROUTES = {
     login: "/login",
     unauthorized: "/unauthorized",
     inactive: "/inactive",
+    loginViajes: "/login-viajes",
   },
 
-  panel: {
-    root: "/panel",
-    users: "/panel/users",
-    incidents: "/panel/incidents",
-    municipalities: "/panel/municipalities",
+  chat: {
+    root: "/chat",
   },
 
-  operator: {
-    root: "/operator",
-    incidents: "/operator/incidents",
-    tasks: "/operator/tasks",
-  },
-
-  app: {
-    root: "/app",
-    report: "/app/report",
-    myReports: "/app/my-reports",
-    profile: "/app/profile",
+  resultados: {
+    root: "/resultados",
   },
 } as const;

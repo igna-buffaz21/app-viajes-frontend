@@ -16,4 +16,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // MicroServicioGrupo2 no tiene middleware CORS (es solo lectura, no se
+    // puede tocar) — este proxy hace que las llamadas a /api salgan del
+    // mismo origen que el front, evitando el bloqueo de CORS del browser.
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
+  },
 })
