@@ -100,6 +100,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "fechaSalida",
       pregunta: "¿Para cuándo estás pensando viajar?",
       motivo: "Necesito la fecha aproximada de salida para buscar opciones disponibles.",
+      tipoPregunta: "texto",
     },
   },
   {
@@ -108,6 +109,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "informacionTemporal.duracionDiasAproximada",
       pregunta: "¿Cuántos días tenés pensado viajar?",
       motivo: "La duración cambia mucho las opciones de vuelos y alojamiento.",
+      tipoPregunta: "texto",
     },
   },
   {
@@ -116,6 +118,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "presupuesto.monto",
       pregunta: "¿Cuál es tu presupuesto aproximado y en qué moneda?",
       motivo: "El presupuesto es clave para descartar opciones que no encajan.",
+      tipoPregunta: "texto",
     },
   },
   {
@@ -124,6 +127,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "viajeros.cantidadTotal",
       pregunta: "¿Cuántas personas viajan?",
       motivo: "La cantidad de viajeros afecta precios y disponibilidad.",
+      tipoPregunta: "texto",
     },
   },
   {
@@ -132,6 +136,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "lugarSalida.ciudad",
       pregunta: "¿Desde qué ciudad salís?",
       motivo: "Necesito el origen para buscar vuelos.",
+      tipoPregunta: "texto",
     },
   },
   {
@@ -140,6 +145,8 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "preferencias.ritmoViaje",
       pregunta: "¿Cómo te gustaría que sea el ritmo del viaje?",
       motivo: "Ayuda a elegir actividades acordes (tranquilo, equilibrado o intenso).",
+      tipoPregunta: "opciones",
+      opciones: ["tranquilo", "equilibrado", "intenso"],
     },
   },
   {
@@ -148,6 +155,7 @@ const PREGUNTAS_CANDIDATAS: {
       campo: "preferencias.intereses",
       pregunta: "¿Qué tipo de experiencias te interesan?",
       motivo: "Ayuda a priorizar actividades y destinos que encajen con tus gustos.",
+      tipoPregunta: "texto",
     },
   },
 ];
