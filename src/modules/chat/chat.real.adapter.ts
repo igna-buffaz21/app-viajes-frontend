@@ -2,6 +2,7 @@ import { api } from "@/lib/axios";
 import { API_ROUTES } from "@/config/api.routes";
 
 import type { ChatMessage, ChatRespuesta } from "./chat.types";
+import { parseRespuestaEstructurada } from "./structuredResponseParser";
 
 interface TravelPlanBackendResponse {
   _id: string;
@@ -24,8 +25,13 @@ function construirPrompt(historial: ChatMessage[]): string {
  * POST /api/travel-plans/generar no mantiene estado de conversación (ver
  * AUDITORIA_BACKEND.md): cada llamada es un evento aislado. Para simular un
  * chat con memoria, reenviamos el historial completo como "prompt" en cada
- * mensaje. Por eso "estado" siempre es "incompleto" y no hay "preguntas"
- * estructuradas — el backend real no ofrece eso hoy, así que no se inventa.
+ * mensaje.
+ *
+ * `respuesta` es hoy texto libre de Gemini, pero se intenta primero
+ * interpretarlo como el contrato de encuesta progresiva ya confirmado con
+ * backend (ver structuredResponseParser.ts) — todavía no implementado del
+ * otro lado, así que en la práctica esto siempre cae al fallback de abajo
+ * ("estado" incompleto, sin preguntas estructuradas) hasta que lo activen.
  */
 export async function enviarMensajeReal(
   historial: ChatMessage[],
@@ -47,6 +53,9 @@ export async function enviarMensajeReal(
     { prompt },
     usuarioId ? { headers: { "x-user-id": usuarioId } } : undefined
   );
+
+  const estructurada = parseRespuestaEstructurada(response.data.respuesta);
+  if (estructurada) return estructurada;
 
   return {
     mensaje: response.data.respuesta,

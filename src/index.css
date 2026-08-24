@@ -180,6 +180,53 @@
   .fv-msg-in { animation: none; }
 }
 
+/* ——— FreeVago: microescenas temáticas de viaje (chat) ———
+   Keyframes tomados 1:1 de Animaciones.html (prefijo original "om-"),
+   renombrados con el prefijo fv- del proyecto. */
+@keyframes fv-scene-drift { from { transform: translateX(190px); } to { transform: translateX(-70px); } }
+@keyframes fv-scene-bird {
+  0% { transform: translate(-24px, 8px); opacity: 0; }
+  22% { opacity: .75; }
+  80% { opacity: .75; }
+  100% { transform: translate(184px, -6px); opacity: 0; }
+}
+@keyframes fv-scene-ride {
+  0% { transform: translateX(-34px); opacity: 0; }
+  14% { opacity: 1; }
+  84% { opacity: 1; }
+  100% { transform: translateX(176px); opacity: 0; }
+}
+@keyframes fv-scene-belt { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -28; } }
+@keyframes fv-scene-fall {
+  0% { transform: translateY(-10px); opacity: 0; }
+  18% { opacity: .85; }
+  88% { opacity: .85; }
+  100% { transform: translateY(46px); opacity: 0; }
+}
+@keyframes fv-scene-wave { from { transform: translateX(0); } to { transform: translateX(-40px); } }
+@keyframes fv-scene-pulse {
+  0%, 100% { transform: scale(1); opacity: .85; }
+  50% { transform: scale(1.09); opacity: 1; }
+}
+@keyframes fv-scene-steam {
+  0% { opacity: 0; transform: translateY(2px) scaleX(.8); }
+  28% { opacity: .5; }
+  100% { opacity: 0; transform: translateY(-16px) scaleX(1.4); }
+}
+@keyframes fv-scene-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+@keyframes fv-scene-blink { 0%, 100% { opacity: .14; } 50% { opacity: 1; } }
+@keyframes fv-scene-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes fv-scene-in { from { opacity: 0; } to { opacity: 1; } }
+
+.fv-scene-swap { animation: fv-scene-in .35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="fv-scene-"] { animation: none !important; }
+}
+
 /* ——— FreeVago: transición suave al cambiar de tema ——— */
 body {
   transition-property: background-color, color;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import type { ChatMessage, ChatRespuesta } from "../chat.types";
 import { MessageBubble } from "../components/MessageBubble";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { SurveySummary } from "../components/SurveySummary";
+import { detectTripTheme } from "../tripThemeDetector";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -31,6 +32,11 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const tripTheme = useMemo(
+    () => detectTripTheme(messages, ultimaRespuesta?.viaje?.preferencias),
+    [messages, ultimaRespuesta],
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
@@ -92,11 +98,11 @@ export default function ChatPage() {
             <Logo withWordmark size={30} variant={theme === "dark" ? "onDark" : "default"} />
             {mode === "mock" ? (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                Modo demo (recomendado para mostrar)
+                Modo demo
               </span>
             ) : (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-200">
-                Modo real (backend fuera de contrato)
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
+                Modo real
               </span>
             )}
           </div>
@@ -133,7 +139,7 @@ export default function ChatPage() {
           <MessageBubble key={index} role={message.role} content={message.contenido} />
         ))}
 
-        <ThinkingIndicator active={isSending} />
+        <ThinkingIndicator active={isSending} theme={tripTheme} />
 
         {!isSending && ultimaRespuesta && ultimaRespuesta.preguntas.length > 0 && (
           <div className="mr-auto max-w-[85%] space-y-2 sm:max-w-[80%]">

@@ -3,10 +3,21 @@ import { enviarMensajeMock } from "./chat.mock.adapter";
 import { enviarMensajeReal } from "./chat.real.adapter";
 import type { ChatMessage, ChatRespuesta } from "./chat.types";
 
+// El mock es 100% síncrono (sin red real), así que sin esta demora
+// artificial el estado "pensando" de ThinkingIndicator dura milisegundos —
+// imperceptible para un humano, aunque el detector de tema funcione bien.
+// El "modo demo" existe justamente para mostrarle la app a alguien, así que
+// necesita sentirse como una respuesta real.
+const MOCK_DELAY_MS = 1200;
+
 export const chatService = {
   async enviarMensaje(historial: ChatMessage[], usuarioId?: string): Promise<ChatRespuesta> {
     if (getChatMode() === "mock") {
-      return enviarMensajeMock(historial);
+      const [respuesta] = await Promise.all([
+        enviarMensajeMock(historial),
+        new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS)),
+      ]);
+      return respuesta;
     }
 
     return enviarMensajeReal(historial, usuarioId);

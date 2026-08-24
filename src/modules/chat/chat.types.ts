@@ -68,4 +68,6 @@ export interface ChatRespuesta {
   estado: EstadoPerfil;
   viaje: PerfilViaje | null;
   preguntas: PreguntaPerfil[];
+  /** Nombres de campo que el backend marca como prioritarios entre los faltantes. Sin UI propia todavía. */
+  camposFaltantesImportantes?: string[];
 }

@@ -2,7 +2,9 @@
  * FreeVago — mensajes de estado "pensando".
  * Rotación conversacional en primera persona mientras la IA trabaja.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import type { TripTheme } from "./tripThemeDetector";
 
 export type ThinkingCategory =
   | "analizando"
@@ -101,6 +103,60 @@ export const THINKING_MESSAGES: ThinkingMessage[] = [
 
 export const THINKING_TEXTS: string[] = THINKING_MESSAGES.map((m) => m.text);
 
+/**
+ * Variantes del mensaje "pensando" cuando ya se detectó un tema de viaje
+ * (ver tripThemeDetector.ts). Mismo tono y largo que THINKING_MESSAGES, para
+ * que el indicador se sienta como parte del mismo sistema.
+ */
+export const THEME_THINKING_TEXTS: Record<Exclude<TripTheme, "default">, string[]> = {
+  beach: [
+    "Recorriendo la costa mentalmente…",
+    "Imaginando la playa perfecta…",
+    "Sintiendo olor a protector solar…",
+    "Escuchando el mar de fondo…",
+    "Buscando la mejor vista al mar…",
+    "Comparando arena y agua…",
+  ],
+  mountain: [
+    "Recorriendo senderos de montaña…",
+    "Midiendo la altura de los picos…",
+    "Abrigándome para el frío…",
+    "Imaginando el aire de montaña…",
+    "Revisando la nieve de la temporada…",
+    "Buscando la mejor vista a la cordillera…",
+  ],
+  city: [
+    "Recorriendo calles mentalmente…",
+    "Ubicando los mejores barrios…",
+    "Revisando el mapa de la ciudad…",
+    "Buscando miradores urbanos…",
+    "Pensando en museos y plazas…",
+    "Calculando distancias entre puntos…",
+  ],
+  food: [
+    "Buscando los mejores restaurantes…",
+    "Pensando en qué vas a comer…",
+    "Revisando vinos de la zona…",
+    "Imaginando el menú perfecto…",
+    "Reservando mesa mentalmente…",
+    "Saboreando la propuesta…",
+  ],
+  adventure: [
+    "Trazando la próxima aventura…",
+    "Revisando senderos para trekking…",
+    "Preparando la mochila mentalmente…",
+    "Buscando rutas poco transitadas…",
+    "Pensando en el próximo desafío…",
+    "Calculando kilómetros de caminata…",
+  ],
+};
+
+/** Pool de mensajes rotativos a usar según el tema de viaje detectado. */
+export function thinkingPoolFor(theme: TripTheme): string[] {
+  if (theme === "default") return THINKING_TEXTS;
+  return THEME_THINKING_TEXTS[theme];
+}
+
 export function messagesFor(...categories: ThinkingCategory[]): string[] {
   return THINKING_MESSAGES.filter((m) => categories.includes(m.category)).map((m) => m.text);
 }
@@ -143,7 +199,21 @@ export function startThinkingRotator(
 
 /** Hook de React equivalente, para usar mientras `active` sea true. */
 export function useThinkingMessage(active: boolean, options: RotatorOptions = {}): string {
-  const [text, setText] = useState<string>(options.pool?.[0] ?? THINKING_TEXTS[0]);
+  const pool = options.pool ?? THINKING_TEXTS;
+  const [text, setText] = useState<string>(pool[0] ?? THINKING_TEXTS[0]);
+  const wasActiveRef = useRef(false);
+
+  // Transición inactivo → activo: sincronizamos el texto ANTES de pintar,
+  // en el mismo render en el que cambia `pool` (ej. cambió el tema de
+  // viaje detectado). Si dependiéramos solo del efecto de abajo, hay un
+  // frame donde el ícono ya muestra la escena nueva pero el texto todavía
+  // es el de la sesión anterior (se vio como bug real con respuestas
+  // rápidas: escena de playa + texto genérico "Leyendo tu mensaje…").
+  if (active && !wasActiveRef.current) {
+    setText(pool[Math.floor(Math.random() * pool.length)] ?? THINKING_TEXTS[0]);
+  }
+  wasActiveRef.current = active;
+
   useEffect(() => {
     if (!active) return;
     return startThinkingRotator(setText, options);
