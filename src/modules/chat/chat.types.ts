@@ -13,7 +13,9 @@ export interface PreguntaPerfil {
 
 export type EstadoPerfil = "incompleto" | "listoParaBuscar";
 
-export type NivelPreferencia = "nada" | "poca" | "bastante" | "prioridad";
+// `null` = todavía no se le preguntó / no contestó (confirmado con el JSON
+// real del prompt de encuesta progresiva, no solo "no aplica").
+export type NivelPreferencia = "nada" | "poca" | "bastante" | "prioridad" | null;
 
 // Contrato B del encargo: perfil de viaje acumulado (todo opcional, se va
 // completando a medida que el usuario responde).
@@ -41,7 +43,7 @@ export interface PerfilViaje {
     clima?: string[];
     tipoViaje?: string[];
     intereses?: string[];
-    ritmoViaje?: "tranquilo" | "equilibrado" | "intenso";
+    ritmoViaje?: "tranquilo" | "equilibrado" | "intenso" | null;
     vidaNocturna?: NivelPreferencia;
     naturaleza?: NivelPreferencia;
     gastronomia?: NivelPreferencia;
@@ -50,8 +52,8 @@ export interface PerfilViaje {
   };
   transporte?: {
     vuelo?: {
-      clase?: "economica" | "premiumEconomy" | "business" | "primeraClase";
-      escalas?: "sinEscalas" | "maxUna" | "indiferente";
+      clase?: "economica" | "premiumEconomy" | "business" | "primeraClase" | null;
+      escalas?: "sinEscalas" | "maxUna" | "indiferente" | null;
     };
   };
   restricciones?: {

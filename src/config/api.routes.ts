@@ -9,4 +9,8 @@ export const API_ROUTES = {
   travelPlans: {
     generar: "/travel-plans/generar",
   },
+
+  conversaciones: {
+    mensaje: "/conversaciones/mensaje",
+  },
 } as const;

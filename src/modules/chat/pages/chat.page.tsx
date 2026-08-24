@@ -45,8 +45,10 @@ export default function ChatPage() {
     });
   }, [messages, isSending]);
 
+  const conversacionCompleta = ultimaRespuesta?.estado === "listoParaBuscar";
+
   async function enviar(contenido: string) {
-    if (!contenido.trim() || isSending) return;
+    if (!contenido.trim() || isSending || conversacionCompleta) return;
 
     const historial = [...messages, { role: "usuario" as const, contenido }];
 
@@ -144,7 +146,12 @@ export default function ChatPage() {
         {!isSending && ultimaRespuesta && ultimaRespuesta.preguntas.length > 0 && (
           <div className="mr-auto max-w-[85%] space-y-2 sm:max-w-[80%]">
             {ultimaRespuesta.preguntas.map((pregunta, index) => (
-              <QuestionCard key={`${pregunta.campo}-${index}`} pregunta={pregunta} onResponder={enviar} />
+              <QuestionCard
+                key={`${pregunta.campo}-${index}`}
+                pregunta={pregunta}
+                onResponder={enviar}
+                camposFaltantesImportantes={ultimaRespuesta.camposFaltantesImportantes}
+              />
             ))}
           </div>
         )}
@@ -168,15 +175,21 @@ export default function ChatPage() {
 
       {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
 
+      {conversacionCompleta && (
+        <p className="mb-2 text-sm text-muted-foreground">
+          Esta encuesta ya está completa. Volvé a "Ver resultados" o probá el modo demo para armar otro viaje.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="flex gap-2 border-t pt-3">
         <Input
           className="h-11 min-w-0 flex-1"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Escribí tu mensaje..."
-          disabled={isSending}
+          placeholder={conversacionCompleta ? "Encuesta completa" : "Escribí tu mensaje..."}
+          disabled={isSending || conversacionCompleta}
         />
-        <Button type="submit" className="h-11" disabled={isSending || !input.trim()}>
+        <Button type="submit" className="h-11" disabled={isSending || conversacionCompleta || !input.trim()}>
           Enviar
         </Button>
       </form>

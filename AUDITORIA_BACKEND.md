@@ -2,6 +2,8 @@
 
 Fecha: 2026-08-18. Auditoría de código real, sin modificar nada dentro de `MicroServicioGrupo2`.
 
+**Re-auditado 2026-08-24** (ver sección 2bis): el "gap crítico" de la sección 2 sobre el contrato de chat progresivo ya no está 100% vigente — existe una implementación real en la rama remota `origin/Alejo`, todavía sin mergear a `main`.
+
 ## 1. Arquitectura general
 
 - Stack: Node.js + Express 5 + TypeScript, MongoDB (driver nativo, sin ODM), cliente `@google/genai` para Gemini.
@@ -35,6 +37,34 @@ Fecha: 2026-08-18. Auditoría de código real, sin modificar nada dentro de `Mic
 - No hay integración con ningún proveedor de vuelos/hoteles/actividades en el código (no hay llamadas HTTP externas salvo a Gemini).
 - **Corrección de framing:** esto se documentó originalmente como "gap crítico" de MicroServicioGrupo2, tratándolo como algo que a este repo le debería faltar. Con `GLOSARIO_DOMINIO.md` (arquitectura de los 3 grupos) ahora se sabe que **no es así**: `MicroServicioGrupo2` es MS1 "Encuesta", cuya responsabilidad es solo el perfil de viaje conversacional. La búsqueda/scraping es responsabilidad de MS2 "Scraping" y el armado final de propuestas (`propuesta`, con `precioEstimado`) de MS3 "Armado" — ninguno de los dos existe en código todavía, en ningún ambiente accesible. No es un bug de MS1: es un servicio que a esta fecha todavía no se construyó, corriente abajo en la cadena `MS1 → MS2 → MS3 → Frontend`.
 - Conclusión (sigue vigente): **hoy no hay forma de disparar una búsqueda real de propuestas de viaje**, venga de MS1, MS2 o MS3 — por eso `modules/results/` de este front sigue siendo 100% mock (ver `results.mock.ts`), con nombres de campo de ejemplo (no el `scrapingResult`/`propuesta` reales, todavía "a definir" según el glosario).
+
+## 2bis. Actualización 2026-08-24 — el contrato de chat progresivo SÍ existe, en una rama sin mergear
+
+Re-auditado a pedido del usuario (solo lectura, `git fetch`/`git show`/`git grep` contra el remoto, sin tocar el working tree ni el checkout local, que sigue en `main`). El punto "Gap crítico" de la sección 2 de arriba **ya no está vigente tal cual está escrito** — hay trabajo real hecho, pero no está en `main`.
+
+**Dónde está:** rama remota `origin/Alejo` (`git branch -r` → `origin/Alejo`, `origin/main`; nada más). `git log --oneline main..origin/Alejo` muestra 1 commit por delante de `main`: `a2f01ef ajuste de prompt, persistencia en las conversaciones`. `git diff --stat main origin/Alejo` → 11 archivos, 1023 líneas agregadas. El checkout local de este repo sigue en `main` (`git status` limpio, sin esos archivos) — o sea, si `MicroServicioGrupo2` está corriendo localmente hoy con `npm run dev` sobre `main`, esta rama **no está activa**. Al momento de esta auditoría el server local (`localhost:3000`) no respondía (`curl` sin conexión), así que no se pudo probar en vivo — todo lo de abajo sale de leer el código con `git show origin/Alejo:<path>`.
+
+**Endpoint nuevo confirmado:**
+
+| Método | Ruta | Body | Devuelve |
+|---|---|---|---|
+| POST | `/api/conversaciones/mensaje` | `{ usuarioId: string, mensaje: string, conversacionId?: string }` | El JSON completo como body de la respuesta (200), **no envuelto en ningún campo `respuesta: string`**: `{ conversacionId, estado: "incompleto"\|"listoParaBuscar", mensaje, viaje, camposFaltantesImportantes, preguntas }` |
+| GET | `/api/conversaciones/:id` | — | El documento `ConversacionViaje` persistido tal cual (forma distinta: `{_id, usuarioId, mensajes[], viaje, estado: "en_progreso"\|"completo", createdAt, updatedAt}`) |
+
+Montado en `src/index.ts` (diff `main`→`origin/Alejo`): `app.use("/api/conversaciones", conversacionRoutes)`.
+
+**Cómo funciona** (`src/services/conversacion.service.ts`):
+- `usuarioId` tiene que ser un `ObjectId` válido de la colección `usuarios` (`UsuariosRepository.obtenerPorId`) — compatible con el login local del frontend (`session.local.ts`), que ya guarda ese mismo `_id`.
+- Si se omite `conversacionId`: busca una conversación "en_progreso" del usuario, o crea una nueva. Si se manda un `conversacionId` que no existe → 404. **El frontend debe guardar el `conversacionId` que devuelve la primera respuesta y reenviarlo en cada mensaje siguiente** — ya no hace falta reenviar el historial completo como hace hoy `chat.real.adapter.ts`.
+- Si la conversación ya está `estado: "completo"` (llegó a `listoParaBuscar`) y se le manda otro mensaje con ese `conversacionId` → **409**. El frontend tiene que dejar de mandar mensajes a esa conversación una vez que llega a `listoParaBuscar`.
+- Llama a Gemini con `systemInstruction: PROMPT_EXTRACCION_VIAJE` (prompt nuevo y real, no el comentario muerto — `promtIA.model.ts:9-849` en esta rama) y `responseMimeType: "application/json"` — o sea, le pide a Gemini modo JSON nativo, no espera que la IA lo envuelva en \`\`\`json. Si `JSON.parse` del texto de Gemini falla, el service tira un 500 (`"La IA devolvió una respuesta que no es JSON válido"`).
+- El `viaje` acumulado (tipo `Viaje` en `viaje.model.ts`) se persiste en Mongo en la colección `conversacionesViaje` (nueva, no existía antes) y se le pasa de vuelta a Gemini en cada turno junto con el mensaje nuevo, para que lo siga completando.
+- `mensaje` en la respuesta, cuando `estado` no es `listoParaBuscar`, es el resultado de unir `preguntas.map(p => p.pregunta)` con espacios — no es una respuesta conversacional libre, es literalmente la concatenación de las preguntas pendientes.
+- Usa `GEMINI_MODEL || "gemini-3.1-flash-lite"` como default — distinto del default de `travelPlan.service.ts` (`"gemini-2.5-flash"`). Sin `GEMINI_MODEL` seteado, revisar si ese modelo sigue disponible (ya pasó antes con `gemini-2.5-flash`, ver punto 9bis más abajo).
+
+**Forma exacta del `Viaje` acumulado** (`viaje.model.ts`, rama `origin/Alejo`): todos los campos hoja son nullable (`string | null`, `number | null`, etc.) — la IA manda `null` explícito en los campos que todavía no completó, no los omite. El tipo `PerfilViaje` del frontend (`chat.types.ts`) ya se actualizó para aceptar `null` en todos esos campos tras comparar 1:1 contra este archivo.
+
+**Pregunta 2 del usuario — JSON de vuelos/hoteles con `rawText`/IATA que le pasó un compañero:** `git grep` (case-insensitive) de `rawText`, `originIata`, `destinationIata`, `scraping`, `resultados.vuelos`, `opciones[]`, y por separado `hotel|aerolinea|scraper|puppeteer|playwright`, contra **todo** `main` y **todo** `origin/Alejo` (las únicas dos ramas remotas que existen) → **cero resultados de código real**, las únicas coincidencias de "hotel"/"vuelos" son texto de ejemplo dentro del prompt de IA (mensajes de usuario simulados). **Conclusión con evidencia: ese JSON no viene de `MicroServicioGrupo2`, en ninguna rama.** Coincide con lo que ya documenta la sección de arriba: la búsqueda/scraping es responsabilidad de MS2 (Grupo 3), que no existe en código en ningún ambiente accesible desde esta auditoría.
 
 ## 3. Persistencia
 

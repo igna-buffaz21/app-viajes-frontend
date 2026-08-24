@@ -27,4 +27,26 @@ export const OPCIONES_POR_CAMPO: Record<string, OpcionesCampo> = {
     multiple: true,
   },
   "preferencias.clima": { opciones: ["calido", "templado", "frio"], multiple: true },
+  "presupuesto.incluyeTransporte": { opciones: ["Sí", "No"], multiple: false },
+  "destino.destinosAbiertos": { opciones: ["Sí", "No"], multiple: false },
+  "viajeros.cantidadTotal": { opciones: ["1", "2", "3", "4", "5+"], multiple: false },
 };
+
+/**
+ * La IA no siempre devuelve `pregunta.campo` con el path completo (a veces
+ * manda "viajeros" en lugar de "viajeros.cantidadTotal") aunque
+ * `camposFaltantesImportantes` sí trae siempre el path completo — se usa
+ * como respaldo para no perder los chips cuando eso pasa.
+ */
+export function resolverOpciones(
+  campo: string,
+  camposFaltantesImportantes?: string[]
+): OpcionesCampo | undefined {
+  if (OPCIONES_POR_CAMPO[campo]) return OPCIONES_POR_CAMPO[campo];
+
+  const candidato = camposFaltantesImportantes?.find(
+    (c) => c === campo || c.startsWith(`${campo}.`)
+  );
+
+  return candidato ? OPCIONES_POR_CAMPO[candidato] : undefined;
+}
