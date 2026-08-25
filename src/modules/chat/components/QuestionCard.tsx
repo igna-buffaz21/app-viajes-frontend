@@ -64,6 +64,12 @@ export function QuestionCard({ pregunta, onResponder, camposFaltantesImportantes
     }
   }
 
+  // Sin nada clickeable (tipoPregunta "texto" sin chips curados), la tarjeta
+  // solo repetiría el texto de la pregunta que ya se ve en el mensaje del
+  // asistente arriba — mejor no mostrarla y que el usuario responda en el
+  // input principal del chat.
+  if (!esSiNo && !config) return null;
+
   return (
     <div className="fv-theme-transition rounded-lg border bg-background p-2">
       <p className="text-sm">{pregunta.pregunta}</p>
