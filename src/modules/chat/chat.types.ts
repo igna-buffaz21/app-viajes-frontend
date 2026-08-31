@@ -41,7 +41,12 @@ export interface PerfilViaje {
   };
   lugarSalida?: { ciudad?: string; provincia?: string; pais?: string };
   destino?: {
-    lugaresPreferidos?: { ciudad?: string; provincia?: string; pais?: string; region?: string }[];
+    // CONFIRMADO en runtime (2026-08-31, POST /api/conversaciones/mensaje real):
+    // llega como array de strings (ej. ["Miami"]), no de objetos — distinto
+    // de lo que documentaba AUDITORIA_BACKEND.md sección 2bis a partir de
+    // leer el modelo en la rama origin/Alejo (puede haber cambiado desde
+    // entonces, o ser una simplificación del lado de la IA al armar el JSON).
+    lugaresPreferidos?: string[];
     destinosAbiertos?: boolean;
   };
   preferencias?: {

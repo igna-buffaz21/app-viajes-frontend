@@ -157,6 +157,24 @@ export function thinkingPoolFor(theme: TripTheme): string[] {
   return THEME_THINKING_TEXTS[theme];
 }
 
+/**
+ * Mitad "avión" del ciclo cuando hay un tema detectado (ver
+ * ThinkingIndicator.tsx) — genérico, compartido por los 5 temas, sobre
+ * buscar vuelos/logística en sí (no sobre el destino). Se alterna con
+ * THEME_THINKING_TEXTS para que la escena avión↔tema y el mensaje cambien
+ * siempre juntos y coherentes.
+ */
+const PLANE_THINKING_TEXTS: string[] = [
+  "Buscando vuelos disponibles…",
+  "Comparando aerolíneas…",
+  "Revisando horarios de conexión…",
+  "Chequeando disponibilidad de asientos…",
+  "Cotizando distintas rutas…",
+  "Viendo qué aeropuerto conviene…",
+  "Afinando el itinerario de vuelo…",
+  "Cruzando fechas con la disponibilidad…",
+];
+
 export function messagesFor(...categories: ThinkingCategory[]): string[] {
   return THINKING_MESSAGES.filter((m) => categories.includes(m.category)).map((m) => m.text);
 }
@@ -220,4 +238,97 @@ export function useThinkingMessage(active: boolean, options: RotatorOptions = {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
   return text;
+}
+
+/** Escena + mensaje de un instante del ciclo de ThinkingIndicator — siempre van juntos (ver startThinkingSlideRotator). */
+export interface ThinkingSlide {
+  scene: "theme" | "plane";
+  text: string;
+}
+
+// El ciclo siempre arranca por la mitad "tema" (más informativa apenas se
+// detecta uno) — la mitad "avión" recién entra en el primer tick del rotador.
+function randomThemeSlide(theme: Exclude<TripTheme, "default">): ThinkingSlide {
+  const pool = THEME_THINKING_TEXTS[theme];
+  return { scene: "theme", text: pool[Math.floor(Math.random() * pool.length)] };
+}
+
+/**
+ * Rota escena+mensaje juntos. Sin tema ("default"), se comporta como
+ * startThinkingRotator de siempre: solo texto, la escena queda fija en el
+ * avión (ThinkingIndicator ya lo maneja así). Con tema detectado, alterna
+ * estrictamente tema→avión→tema→avión cada 1.8-2.5s — nunca independiente,
+ * para que escena y mensaje siempre estén en el mismo momento del ciclo.
+ */
+export function startThinkingSlideRotator(
+  onSlide: (slide: ThinkingSlide) => void,
+  theme: TripTheme,
+  { minDelay = 1800, maxDelay = 2500 }: { minDelay?: number; maxDelay?: number } = {}
+): () => void {
+  if (theme === "default") {
+    return startThinkingRotator((text) => onSlide({ scene: "plane", text }), {
+      minDelay,
+      maxDelay,
+      pool: THINKING_TEXTS,
+    });
+  }
+
+  const themePool = THEME_THINKING_TEXTS[theme];
+  const planePool = PLANE_THINKING_TEXTS;
+  let themeIndex = Math.floor(Math.random() * themePool.length);
+  let planeIndex = Math.floor(Math.random() * planePool.length);
+  let turno: "theme" | "plane" = "theme";
+  let timer: ReturnType<typeof setTimeout>;
+
+  const emit = () => {
+    onSlide(
+      turno === "theme" ? { scene: "theme", text: themePool[themeIndex] } : { scene: "plane", text: planePool[planeIndex] }
+    );
+  };
+
+  emit();
+  const tick = () => {
+    timer = setTimeout(
+      () => {
+        if (turno === "theme") {
+          planeIndex = nextIndex(planeIndex, planePool.length);
+          turno = "plane";
+        } else {
+          themeIndex = nextIndex(themeIndex, themePool.length);
+          turno = "theme";
+        }
+        emit();
+        tick();
+      },
+      minDelay + Math.random() * (maxDelay - minDelay)
+    );
+  };
+  tick();
+  return () => clearTimeout(timer);
+}
+
+/** Hook de React equivalente a useThinkingMessage, pero devolviendo escena+mensaje juntos (ver ThinkingIndicator.tsx). */
+export function useThinkingSlide(active: boolean, theme: TripTheme): ThinkingSlide {
+  const [slide, setSlide] = useState<ThinkingSlide>(() =>
+    theme === "default" ? { scene: "plane", text: THINKING_TEXTS[0] } : randomThemeSlide(theme)
+  );
+  const wasActiveRef = useRef(false);
+  const themeRef = useRef(theme);
+
+  // Mismo motivo que useThinkingMessage: sincronizar ANTES de pintar en la
+  // transición inactivo→activo (o cambio de tema), para que la primera
+  // escena+mensaje ya estén correctos desde el primer frame.
+  if (active && (!wasActiveRef.current || themeRef.current !== theme)) {
+    setSlide(theme === "default" ? { scene: "plane", text: THINKING_TEXTS[0] } : randomThemeSlide(theme));
+  }
+  wasActiveRef.current = active;
+  themeRef.current = theme;
+
+  useEffect(() => {
+    if (!active) return;
+    return startThinkingSlideRotator(setSlide, theme);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, theme]);
+
+  return slide;
 }

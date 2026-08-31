@@ -4,6 +4,8 @@ Fecha: 2026-08-18. Auditoría de código real, sin modificar nada dentro de `Mic
 
 **Re-auditado 2026-08-24** (ver sección 2bis): el "gap crítico" de la sección 2 sobre el contrato de chat progresivo ya no está 100% vigente — existe una implementación real en la rama remota `origin/Alejo`, todavía sin mergear a `main`.
 
+**Ampliado 2026-08-31** (ver sección 12): este documento pasó a incluir también hallazgos de `ms2-scraping` (Grupo 3, repo `FREEVAGO` — https://github.com/Luca-237/FREEVAGO), clonado y levantado localmente en solo lectura para conectar `/resultados` y `/explorar` del front. No es parte de `MicroServicioGrupo2`, pero se documenta acá porque es el mismo tipo de hallazgo (bug de backend encontrado probando el flujo real end-to-end desde el front) y no hay otro lugar central donde el usuario los esté juntando para pasarle a sus equipos.
+
 ## 1. Arquitectura general
 
 - Stack: Node.js + Express 5 + TypeScript, MongoDB (driver nativo, sin ODM), cliente `@google/genai` para Gemini.
@@ -63,6 +65,8 @@ Montado en `src/index.ts` (diff `main`→`origin/Alejo`): `app.use("/api/convers
 - Usa `GEMINI_MODEL || "gemini-3.1-flash-lite"` como default — distinto del default de `travelPlan.service.ts` (`"gemini-2.5-flash"`). Sin `GEMINI_MODEL` seteado, revisar si ese modelo sigue disponible (ya pasó antes con `gemini-2.5-flash`, ver punto 9bis más abajo).
 
 **Forma exacta del `Viaje` acumulado** (`viaje.model.ts`, rama `origin/Alejo`): todos los campos hoja son nullable (`string | null`, `number | null`, etc.) — la IA manda `null` explícito en los campos que todavía no completó, no los omite. El tipo `PerfilViaje` del frontend (`chat.types.ts`) ya se actualizó para aceptar `null` en todos esos campos tras comparar 1:1 contra este archivo.
+
+**Corrección 2026-08-31 — `destino.lugaresPreferidos` no coincide con lo documentado arriba:** probando el flujo real end-to-end (chat → `/resultados`), `POST /api/conversaciones/mensaje` devolvió en producción `"destino":{"lugaresPreferidos":["Miami"],"destinosAbiertos":false}` — un **array de strings**, no de objetos `{ciudad, provincia, pais, region}` como se documentó arriba (leído de `viaje.model.ts` en `origin/Alejo` en su momento). Puede ser que el modelo haya cambiado desde esa lectura, o que la IA arme el JSON de forma más simple que el tipo declarado. No se volvió a auditar el repo por esto (es un dato de runtime, no hacía falta) — se ajustó `chat.types.ts`/`SurveySummary.tsx`/`resultados.desdeEncuesta.ts` del frontend para leerlo como string. Si el equipo de backend cambia esto de nuevo, avisar.
 
 **Pregunta 2 del usuario — JSON de vuelos/hoteles con `rawText`/IATA que le pasó un compañero:** `git grep` (case-insensitive) de `rawText`, `originIata`, `destinationIata`, `scraping`, `resultados.vuelos`, `opciones[]`, y por separado `hotel|aerolinea|scraper|puppeteer|playwright`, contra **todo** `main` y **todo** `origin/Alejo` (las únicas dos ramas remotas que existen) → **cero resultados de código real**, las únicas coincidencias de "hotel"/"vuelos" son texto de ejemplo dentro del prompt de IA (mensajes de usuario simulados). **Conclusión con evidencia: ese JSON no viene de `MicroServicioGrupo2`, en ninguna rama.** Coincide con lo que ya documenta la sección de arriba: la búsqueda/scraping es responsabilidad de MS2 (Grupo 3), que no existe en código en ningún ambiente accesible desde esta auditoría.
 
@@ -162,3 +166,57 @@ Notados durante la QA en modo mock del 2026-08-20, ninguno bloquea nada hoy — 
 **(b) Decidir si el mock debe preguntar los campos enum que hoy quedan sin uso.** `chat.options.ts`/`QuestionCard` soportan chips para `socializar`, `vidaNocturna`, `naturaleza`, `gastronomia`, `cultura` y los campos de `transporte.vuelo` — pero `PREGUNTAS_CANDIDATAS` en `chat.mock.adapter.ts` nunca los incluye como pregunta candidata, así que esos chips **nunca se muestran en modo demo hoy**, aunque el código que los renderiza funciona (confirmado con `ritmoViaje` e `intereses`, que sí están en la lista de candidatas). Es una decisión de producto/alcance, no un bug: ¿vale la pena sumarlos a `PREGUNTAS_CANDIDATAS` para que el modo demo muestre la variedad completa de chips, o se deja así hasta que MS1 real los pregunte?
 
 **(c) Bug preexistente en `extraerPerfil`: no reconoce "dólares" con tilde.** En `chat.mock.adapter.ts`, el regex de presupuesto captura tanto `dolares` como `dólares`, pero la resolución de moneda inmediatamente después solo chequea `presupuesto[2].startsWith("dolar")` (sin tilde) — así que si el usuario escribe "dólares" (con tilde), el monto se extrae bien pero la moneda cae al `else` final y queda mal seteada como `"ARS"` en vez de `"USD"`. Preexistente a este plan (no se tocó `extraerPerfil` salvo agregar las dos líneas de `gastronomia`/`vida nocturna` documentadas en el commit `feat: encuesta con chips...`). No se tocó todavía.
+
+## 12. Hallazgos en `ms2-scraping` (Grupo 3, repo `FREEVAGO`) — 2026-08-31, solo lectura
+
+Repo clonado en `C:\Proyectos\FREEVAGO-grupo3` (`github.com/Luca-237/FREEVAGO`) y levantado local (`ms2-scraping` en `:3003`, con `.env` real — `MONGO_URI` + `API_NINJAS_KEY`) para conectar `/resultados` y `/explorar` de este front a datos reales. **Cero cambios en ese repo** — `git status` se confirmó limpio en cada paso. Los tres hallazgos de abajo salen de correr el servicio ya levantado, leer su código fuente y comparar contra requests reales (`curl` + Puppeteer del propio scraper) — no son conjeturas.
+
+### 12.1. `vuelos.scraper.js` no logra extraer ningún vuelo (afecta `GET /api/vuelos` y `POST /api/viaje`)
+
+**No es un problema del request del front.** Probado con dos rutas: Córdoba→Miami (15-22/11/2026, la que usa el front) y Buenos Aires→Madrid (EZE-MAD, 15/11/2026 — una de las rutas más servidas del mundo, para descartar que sea la ruta/fecha puntual). Las dos veces, mismo resultado: `{"error": "No se encontraron vuelos tras agotar la búsqueda aproximada."}`.
+
+Log real del servicio (`ms2-scraping`, request EZE-MAD):
+```
+[Scraper] Navegando a: https://booking.kayak.com/flights/EZE-MAD/2026-11-15?adults=1&cabin_class=ECONOMY&sort=bestflight_a
+[Scraper] Esperando carga de vuelos...
+[Scraper] Página cargada para Ida: 2026-11-15 / Vuelta: N/A desde EZE
+```
+La URL que arma `performScrape()` (`vuelos.scraper.js:80-82`) es válida — confirmado abriendo exactamente esa misma URL en un browser normal (no headless): carga una página real de Kayak con vuelos y precios reales (`$474`, `$669`, `$707`...). O sea: la ruta/fecha tiene resultados reales en Kayak, y la URL que arma el scraper es correcta.
+
+El problema está en la extracción (`vuelos.scraper.js:104-128`): ninguno de los ~10 selectores CSS (`div[data-testid="searchresults-card"]`, `div.FlightCard`, etc.) ni el fallback por regex sobre todos los `div` de la página logra encontrar una sola tarjeta de vuelo, en un browser Puppeteer con `puppeteer-extra-plugin-stealth`. Dos causas posibles, no se pudo distinguir cuál sin inspeccionar la sesión de Puppeteer en vivo (no se intentó, es tocar el repo): **(a)** Kayak detecta y bloquea/degrada la sesión headless a pesar del stealth plugin, o **(b)** los selectores quedaron desactualizados contra el DOM actual de Kayak. En ningún caso hay retry real para este escenario: el loop de reintentos (`vuelos.scraper.js:78-149`) solo reintenta con `+1 día` cuando Kayak redirige a una URL con `not-available` — si la página carga "normal" pero con 0 tarjetas extraídas, hace `break` inmediatamente después del primer intento, sin reintentar.
+
+### 12.2. `hoteles.scraper.js:15-17` — el nombre del hotel siempre sale `"Comparar"`
+
+Afecta `GET /api/hoteles` y `POST /api/viaje`. Objeto real devuelto por el servicio (15/15 hoteles de una búsqueda real a Miami, sin excepción):
+```json
+{
+  "name": "Comparar",
+  "price": "$ 257.289",
+  "rating": "6,3",
+  "rawText": "Comparar | Posh South Beach | Se abre en una ventana nueva | South Beach, Miami Beach..."
+}
+```
+Causa exacta (`hoteles.scraper.js`):
+```js
+let name = lines[0];   // línea 15 — "Comparar" es la primera línea del texto scrapeado de la card
+if (name && (name.toLowerCase().includes('oferta') || name.toLowerCase().includes('patrocinado'))) {
+    name = lines[1] || name;   // línea 16-17 — solo salta a la línea 2 si detecta "oferta"/"patrocinado", nunca para "Comparar"
+}
+```
+`"Comparar"` es el label del botón de comparación de Booking.com, no el nombre del hotel — y el código nunca contempla ese caso para saltar a la línea siguiente. El nombre real sí está disponible, como segundo segmento de `rawText` (separado por `|`). El frontend absorbió esto con un workaround en `results.mapper.ts` (detecta `name === "Comparar"` y extrae el nombre real de `rawText`), pero es un parche del lado del cliente — la corrección de fondo es este `if` en `hoteles.scraper.js`.
+
+### 12.3. `budget` de `POST /api/viaje` no tiene concepto de moneda, y compara contra precios en monedas mezcladas entre fuentes
+
+Esto es un problema de diseño de MS2, no algo que el frontend pueda corregir por su cuenta — se documenta para que el equipo lo evalúe, no se intentó "arreglar" desde acá más allá de elegir un criterio razonable en el front (ver `dolar.service.ts`/`results.page.tsx` de este repo).
+
+**Evidencia:** `armarViaje()` (`ms2-scraping/src/services/viaje.service.js:21-30`) recibe `budget` como número plano, sin ningún campo de moneda en el request ni en la respuesta (`metadata.viaje.presupuestoPorPersona` es literalmente el mismo valor que se mandó, sin unidad):
+```js
+const presupuesto = parseInt(String(budget).replace(/[^\d]/g, ''), 10) || Infinity;
+...
+vuelos = vuelosResult.flights.filter(v => parsePrice(v.price) <= presupuesto);
+hoteles = hotelesResult.hotels.filter(h => (parsePrice(h.price) / pax) <= presupuesto);
+actividades = actividadesResult.activities.filter(a => parsePrice(a.precioPorPersona) <= presupuesto);
+```
+`parsePrice()` (mismo archivo) solo extrae dígitos del string de precio scrapeado — **no mira ni normaliza la moneda**. Y esos precios scrapeados vienen en monedas distintas según la fuente, confirmado con datos reales de la misma búsqueda: hoteles en escala ARS (`"$ 257.289"`), actividades explícitamente marcadas `"ARS $ ..."` (aunque el ejemplo del README/ejemplo de encargo original mostraba vuelos en escala USD tipo `"$575"` — no se pudo confirmar con un vuelo real porque el punto 12.1 impidió obtener un resultado, pero el propio código de `vuelos.scraper.js:18` busca explícitamente el string `"USD"` o `"ARS"` en el precio scrapeado, lo que confirma que el scraper mismo espera que la moneda de vuelos pueda variar).
+
+Consecuencia: un mismo `budget` numérico se compara contra vuelos que pueden estar en USD y contra hoteles/actividades que están en ARS — con la escala de conversión real (~1 USD ≈ 1500 ARS, dólar oficial), esto hace que el filtro de presupuesto sea **incorrecto por un factor de ~1000x** para al menos una de las dos fuentes, dependiendo en qué moneda haya interpretado el usuario su propio presupuesto. No es corregible desde el frontend sin adivinar: el frontend no controla en qué moneda vino cada precio scrapeado, solo el número que manda como `budget`. Criterio elegido en este front mientras tanto: mandar siempre `budget` en ARS (ver `results.page.tsx`), por ser la escala consistente en 2 de las 3 fuentes confirmadas con datos reales — pero el filtro de presupuesto de MS2 en sí sigue siendo incorrecto para vuelos en USD hasta que el diseño de `armarViaje()`/`parsePrice()` contemple la moneda por fuente.

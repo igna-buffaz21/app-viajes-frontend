@@ -279,11 +279,10 @@ export default function ChatPage() {
             <p className="text-sm font-medium">Encuesta completa</p>
             <SurveySummary viaje={ultimaRespuesta.viaje} />
             <p className="mt-3 mb-2 text-sm text-muted-foreground">
-              Buscando las mejores opciones para vos... (próximamente — hoy la pantalla de resultados
-              muestra datos de ejemplo, ver AUDITORIA_BACKEND.md)
+              Ya tenemos lo necesario para buscar vuelos, hoteles y actividades reales.
             </p>
             <Button size="sm" className="h-11" onClick={handleVerResultados}>
-              Ver resultados de ejemplo
+              Ver resultados
             </Button>
           </div>
         )}

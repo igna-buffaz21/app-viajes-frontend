@@ -1,8 +1,11 @@
 import type { RawBusquedaResponse } from "./results.types";
 
-// Fixture estático con la forma sucia real del contrato C del encargo
-// (precios como string, rating con coma, rawText) — no viene de ningún
-// backend, ver AUDITORIA_BACKEND.md sección 2.
+// Desconectado (decisión de producto 2026-08-31): solo lo usa
+// results.service.ts, que a su vez ya no lo llama nadie (/resultados es el
+// flujo real ahora). Se mantiene por su valor de referencia: resultó ser
+// casi idéntico a la forma real de MS2 (confirmado en runtime), útil como
+// ejemplo de la forma "sucia" (precios como string, rating con coma,
+// rawText) sin tener que levantar ms2-scraping para verla.
 export const mockBusquedaResponse: RawBusquedaResponse = {
   metadata: {
     origen: { input: "Córdoba, Argentina", iata: "COR", nombreIngles: "Córdoba, Argentina" },
