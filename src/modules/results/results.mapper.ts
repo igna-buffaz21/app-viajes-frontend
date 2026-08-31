@@ -4,23 +4,17 @@ import type {
   Hotel,
   Precio,
   RawActividadOpcion,
+  RawBusquedaMs2Response,
   RawBusquedaResponse,
   RawHotelOpcion,
   RawVueloOpcion,
   Vuelo,
 } from "./results.types";
 
-// TODO(glosario compartido, ver GLOSARIO_DOMINIO.md): este mapper asume los
-// nombres de campo de results.types.ts (RawVueloOpcion, RawHotelOpcion,
-// RawActividadOpcion), que son un ejemplo del encargo original, no el
-// contrato real de MS2 (`scrapingResult`) ni de MS3 (`propuesta`) — ambos
-// "a definir" según el glosario. Cuando se cierren, el ajuste es acá adentro
-// (parsePrecio/parseRating/map*); los tipos limpios (Vuelo/Hotel/Actividad/
-// Precio) y los componentes visuales no deberían necesitar tocarse.
-// Ojo al mapear el contrato real cuando llegue: el glosario distingue
-// `destino` (ciudad) de `destination` (IATA), `origen` de `origin` (IATA,
-// puede ser lista), y `precio` (ítem suelto) de `precioEstimado` (total de
-// una propuesta) — no son sinónimos.
+// CONFIRMADO (2026-08-31, ver results.types.ts): los nombres de campo de
+// RawVueloOpcion/RawHotelOpcion/RawActividadOpcion coinciden con el output
+// real de ms2-scraping — parsePrecio/parseRating/map* de acá abajo aplican
+// tal cual a datos reales, no solo al fixture mock.
 
 /**
  * Heurística de moneda: el ejemplo real del encargo mezcla precios "chicos"
@@ -50,8 +44,30 @@ export function mapVuelo(raw: RawVueloOpcion): Vuelo {
   return { precio: parsePrecio(raw.price), legs: raw.legs };
 }
 
+// CONFIRMADO (2026-08-31, contra datos reales): raw.name viene SIEMPRE
+// "Comparar" — es el label del botón de comparación de Booking.com, no el
+// nombre del hotel. Causa exacta en hoteles.scraper.js de ms2-scraping
+// (línea 15): `let name = lines[0]` toma la primera línea del texto
+// scrapeado sin filtrar ese caso (solo salta a lines[1] si detecta
+// "oferta"/"patrocinado"). Es un bug del scraper, no un campo mal leído acá
+// — no se toca ese repo. El nombre real sí está disponible como segundo
+// segmento de rawText ("Comparar | <nombre real> | ..."), así que se
+// extrae de ahí cuando raw.name es ese valor conocido-inválido; si el
+// scraper se corrige más adelante, esto deja de activarse solo (raw.name
+// pasa a usarse directo).
+const NOMBRE_HOTEL_INVALIDO = /^comparar$/i;
+
+function extraerNombreDesdeRawText(rawText: string): string {
+  const segmentos = rawText.split("|").map((s) => s.trim()).filter(Boolean);
+  return segmentos[1] ?? segmentos[0] ?? "Hotel sin nombre";
+}
+
 export function mapHotel(raw: RawHotelOpcion): Hotel {
-  return { nombre: raw.name, precio: parsePrecio(raw.price), rating: parseRating(raw.rating) };
+  const nombre = NOMBRE_HOTEL_INVALIDO.test(raw.name.trim())
+    ? extraerNombreDesdeRawText(raw.rawText)
+    : raw.name;
+
+  return { nombre, precio: parsePrecio(raw.price), rating: parseRating(raw.rating) };
 }
 
 export function mapActividad(raw: RawActividadOpcion): Actividad {
@@ -69,5 +85,27 @@ export function mapBusqueda(raw: RawBusquedaResponse): BusquedaResultados {
     vuelos: raw.resultados.vuelos.opciones.map(mapVuelo),
     hoteles: raw.resultados.hoteles.opciones.map(mapHotel),
     actividades: raw.resultados.actividades.opciones.map(mapActividad),
+    warnings: raw.warnings ?? [],
+  };
+}
+
+/**
+ * Para el sobre real de POST /api/viaje (ms2-scraping) — distinto de
+ * mapBusqueda() de arriba porque cada fuente trae su propio `error` en vez
+ * de un `warnings[]` global (ver RawBusquedaMs2Response). Reusa los mappers
+ * por ítem tal cual: el shape de cada opción (vuelo/hotel/actividad) es
+ * idéntico entre el fixture mock y los datos reales, confirmado en runtime.
+ */
+export function mapBusquedaMs2(raw: RawBusquedaMs2Response): BusquedaResultados {
+  const { vuelos, hoteles, actividades } = raw.resultados;
+  const warnings = [vuelos.error, hoteles.error, actividades.error].filter(
+    (error): error is string => Boolean(error)
+  );
+
+  return {
+    vuelos: vuelos.opciones.map(mapVuelo),
+    hoteles: hoteles.opciones.map(mapHotel),
+    actividades: actividades.opciones.map(mapActividad),
+    warnings,
   };
 }

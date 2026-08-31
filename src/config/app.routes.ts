@@ -13,4 +13,8 @@ export const APP_ROUTES = {
   resultados: {
     root: "/resultados",
   },
+
+  explorar: {
+    root: "/explorar",
+  },
 } as const;

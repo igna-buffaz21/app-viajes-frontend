@@ -4,10 +4,12 @@ import { mapBusqueda } from "./results.mapper";
 import { mockBusquedaResponse } from "./results.mock";
 import type { BusquedaResultados } from "./results.types";
 
-// TODO(backend real): MicroServicioGrupo2 no tiene ningún endpoint de
-// búsqueda hoy (ver AUDITORIA_BACKEND.md, sección 2) — siempre se devuelve
-// el fixture mock. Cuando exista, esta función pasa a hacer el POST real y
-// mapBusqueda() absorbe el cambio de forma sin tocar la UI.
+// Desconectado de /resultados (decisión de producto 2026-08-31): esa
+// pantalla pasó a ser el flujo real contra MS2 (ver busqueda.service.ts,
+// resultados.desdeEncuesta.ts y pages/results.page.tsx) — ya no muestra
+// este fixture. Nada importa este archivo hoy; queda para no perder el
+// fixture/la forma de la respuesta mock, misma convención que
+// TripThemeScene.tsx.
 export const resultsService = {
   async buscar(_viaje: PerfilViaje | null): Promise<BusquedaResultados> {
     await new Promise((resolve) => setTimeout(resolve, 600));

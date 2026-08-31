@@ -5,9 +5,9 @@ interface SurveySummaryProps {
 }
 
 function formatDestino(viaje: PerfilViaje): string | null {
-  const preferido = viaje.destino?.lugaresPreferidos?.[0];
-  const partes = [preferido?.ciudad, preferido?.region, preferido?.pais].filter(Boolean);
-  if (partes.length > 0) return partes.join(", ");
+  // CONFIRMADO en runtime (2026-08-31): lugaresPreferidos es string[] (ej. ["Miami"]), no objetos — ver chat.types.ts.
+  const preferido = viaje.destino?.lugaresPreferidos?.[0]?.trim();
+  if (preferido) return preferido;
   return viaje.destino?.destinosAbiertos ? "Destino abierto" : null;
 }
 

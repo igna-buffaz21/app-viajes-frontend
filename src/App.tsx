@@ -11,6 +11,7 @@ import AccessPage from "./modules/session/pages/accessPage";
 import { RequireSession } from "./modules/session/RequireSession";
 import ChatPage from "./modules/chat/pages/chat.page";
 import ResultsPage from "./modules/results/pages/results.page";
+import ExplorarPage from "./modules/results/pages/explorar.page";
 
 function App() {
   const { getToken, isLoaded } = useAuth();
@@ -68,6 +69,15 @@ function App() {
         element={
           <RequireSession>
             <ResultsPage />
+          </RequireSession>
+        }
+      />
+
+      <Route
+        path={APP_ROUTES.explorar.root}
+        element={
+          <RequireSession>
+            <ExplorarPage />
           </RequireSession>
         }
       />
