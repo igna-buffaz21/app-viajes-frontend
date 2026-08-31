@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { resolverOpciones } from "../chat.options";
 import type { PreguntaPerfil } from "../chat.types";
+import { SiNoQuestion } from "./SiNoQuestion";
 
 interface QuestionCardProps {
   pregunta: PreguntaPerfil;
@@ -14,7 +15,17 @@ interface QuestionCardProps {
 }
 
 export function QuestionCard({ pregunta, onResponder, camposFaltantesImportantes }: QuestionCardProps) {
-  const config = resolverOpciones(pregunta.campo, camposFaltantesImportantes);
+  // La config local (chips curados por campo, con fallback por
+  // camposFaltantesImportantes cuando la IA manda un `campo` sin el path
+  // completo) tiene prioridad porque sabe si el campo admite selección
+  // múltiple (ej. clima/intereses); si no hay config local, se usan las
+  // `opciones` que mandó la IA para tipoPregunta "opciones" (siempre
+  // selección única, ver promtIA.model.ts en backend).
+  const configLocal = resolverOpciones(pregunta.campo, camposFaltantesImportantes);
+  const opcionesBackend =
+    pregunta.tipoPregunta === "opciones" && pregunta.opciones?.length ? pregunta.opciones : undefined;
+  const config = configLocal ?? (opcionesBackend ? { opciones: opcionesBackend, multiple: false } : undefined);
+  const esSiNo = pregunta.tipoPregunta === "siNo";
   const otroPanelId = `otro-panel-${pregunta.campo}`;
 
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set());
@@ -53,11 +64,19 @@ export function QuestionCard({ pregunta, onResponder, camposFaltantesImportantes
     }
   }
 
+  // Sin nada clickeable (tipoPregunta "texto" sin chips curados), la tarjeta
+  // solo repetiría el texto de la pregunta que ya se ve en el mensaje del
+  // asistente arriba — mejor no mostrarla y que el usuario responda en el
+  // input principal del chat.
+  if (!esSiNo && !config) return null;
+
   return (
     <div className="fv-theme-transition rounded-lg border bg-background p-2">
       <p className="text-sm">{pregunta.pregunta}</p>
 
-      {config && (
+      {esSiNo && <SiNoQuestion onResponder={onResponder} />}
+
+      {!esSiNo && config && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {config.opciones.map((opcion) => {
             const activa = seleccionadas.has(opcion);

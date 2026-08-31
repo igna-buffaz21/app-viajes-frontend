@@ -5,10 +5,15 @@ export interface ChatMessage {
   contenido: string;
 }
 
+export type TipoPregunta = "siNo" | "opciones" | "texto";
+
 export interface PreguntaPerfil {
   campo: string;
   pregunta: string;
   motivo: string;
+  tipoPregunta: TipoPregunta;
+  /** Solo presente cuando tipoPregunta es "opciones": alternativas para armar la encuesta. */
+  opciones?: string[];
 }
 
 export type EstadoPerfil = "incompleto" | "listoParaBuscar";
@@ -65,6 +70,18 @@ export interface PerfilViaje {
   };
 }
 
+/** Estado del registro de conversación en Mongo (distinto de EstadoPerfil, que es el estado del perfil que arma la IA en cada turno). */
+export type EstadoConversacion = "en_progreso" | "completo";
+
+/** Resumen liviano de una conversación, para listarlas y poder cambiar entre ellas (GET /api/conversaciones). */
+export interface ConversacionResumen {
+  conversacionId: string;
+  estado: EstadoConversacion;
+  titulo: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChatRespuesta {
   mensaje: string;
   estado: EstadoPerfil;
@@ -72,4 +89,6 @@ export interface ChatRespuesta {
   preguntas: PreguntaPerfil[];
   /** Nombres de campo que el backend marca como prioritarios entre los faltantes. Sin UI propia todavía. */
   camposFaltantesImportantes?: string[];
+  /** Id de la conversación en el backend (POST /api/conversaciones/mensaje). Ausente en modo mock. */
+  conversacionId?: string;
 }

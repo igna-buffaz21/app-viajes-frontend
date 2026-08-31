@@ -12,5 +12,7 @@ export const API_ROUTES = {
 
   conversaciones: {
     mensaje: "/conversaciones/mensaje",
+    listar: "/conversaciones",
+    detalle: (id: string) => `/conversaciones/${id}`,
   },
 } as const;
