@@ -109,6 +109,27 @@ function detectThemeFromStructured(signals: StructuredTripSignals | null | undef
 }
 
 /**
+ * Para /resultados (ver results.page.tsx): a diferencia del chat en vivo,
+ * acá la encuesta ya está *completa* — `viaje.preferencias` no es un
+ * acumulado a medio camino que pueda "pisar" un cambio de opinión
+ * posterior (esa es la razón por la que detectTripTheme le da prioridad al
+ * texto reciente, ver comentario de esa función). Es el estado final, así
+ * que acá se invierte el orden: estructurado primero (más preciso, viene
+ * de campos que el propio usuario confirmó, no de adivinar palabras en
+ * texto libre), `detectTripTheme` de texto como respaldo si no matcheó
+ * nada, "default" si tampoco. Nunca se infiere el tema por el nombre del
+ * destino (ver `viaje.destino`, a propósito no se lee acá): "Bariloche"
+ * como texto no garantiza nieve/montaña, sería una lista de ciudades
+ * hardcodeada que se desactualiza sola.
+ */
+export function detectResultadosTheme(viaje: PerfilViaje | null | undefined, messages: ChatMessage[] = []): TripTheme {
+  const porPreferencias = detectThemeFromStructured(viaje?.preferencias);
+  if (porPreferencias) return porPreferencias;
+
+  return detectTripTheme(messages);
+}
+
+/**
  * Recorre los mensajes del usuario en orden y devuelve la escena a mostrar.
  * Un mensaje posterior que matchea una categoría distinta actualiza el tema
  * (el usuario cambió de idea); un mensaje sin match no resetea el tema ya

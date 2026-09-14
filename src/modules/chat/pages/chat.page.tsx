@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Logo } from "@/components/brand/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_ROUTES } from "@/config/app.routes";
 import { prefersReducedMotion } from "@/lib/motion";
 import { useTheme } from "@/lib/useTheme";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useAppAuth } from "@/modules/session/useAppAuth";
 
-import { getChatMode, setChatMode } from "../chat.config";
-import { getConversacionActiva, limpiarConversacionActiva, setConversacionActiva } from "../chat.storage";
+import {
+  getConversacionActiva,
+  getHistorialDesktopAbierto,
+  limpiarConversacionActiva,
+  setConversacionActiva,
+  setHistorialDesktopAbierto,
+} from "../chat.storage";
+import { AccountFooter } from "../components/AccountFooter";
+import { ChatInputArea } from "../components/ChatInputArea";
 import { QuestionCard } from "../components/QuestionCard";
 import { chatService } from "../chat.service";
 import type { ChatMessage, ChatRespuesta, ConversacionResumen, EstadoConversacion, EstadoPerfil } from "../chat.types";
@@ -20,6 +29,7 @@ import { MessageBubble } from "../components/MessageBubble";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { SurveySummary } from "../components/SurveySummary";
 import { detectTripTheme } from "../tripThemeDetector";
+import { construirResumenViaje, PEDIDO_DESTINO_CONCRETO, type RetomarViajeState } from "../reanudarViaje";
 
 /** Actualiza (o agrega) la entrada de una conversación en el listado de la sidebar sin tener que recargarlo del backend en cada mensaje. */
 function actualizarListado(
@@ -41,13 +51,31 @@ function actualizarListado(
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAppAuth();
   const { theme } = useTheme();
 
-  const [mode, setMode] = useState(getChatMode());
+  // Viene de /resultados (ver results.page.tsx → VolverAlChatButton) cuando
+  // hace falta corregir algo de la encuesta (destino abierto, datos
+  // faltantes, destino no encontrado en MS2) sobre una conversación que MS1
+  // ya marcó "completo" — esa conversación rechaza con 409 cualquier
+  // mensaje nuevo (confirmado con curl real), así que la única opción es
+  // arrancar una conversación nueva. Se lee una sola vez al montar (un
+  // useRef, no depende de location.state en renders posteriores) para no
+  // reaplicarlo si el usuario navega de vuelta a /chat por otro lado.
+  const retomarViajeRef = useRef(
+    (location.state as { retomarViaje?: RetomarViajeState } | null)?.retomarViaje ?? null
+  );
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [ultimaRespuesta, setUltimaRespuesta] = useState<ChatRespuesta | null>(null);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(() =>
+    retomarViajeRef.current
+      ? `${construirResumenViaje(retomarViajeRef.current.viaje)} ${
+          retomarViajeRef.current.motivo === "destinoAbierto" ? PEDIDO_DESTINO_CONCRETO : ""
+        }`.trim() + " "
+      : ""
+  );
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +83,48 @@ export default function ChatPage() {
   const [conversacionActivaId, setConversacionActivaId] = useState<string | null>(null);
   const [cargandoConversaciones, setCargandoConversaciones] = useState(false);
 
+  // Abajo de md (ver useIsDesktop.ts): el historial es un drawer/overlay que
+  // tapa el contenido, arranca cerrado siempre, no se persiste. Desde md: es
+  // un panel fijo que empuja el chat, y recuerda si estaba abierto/cerrado
+  // por usuario (ver chat.storage.ts) — mismo criterio que el historial de
+  // esta interfaz de Claude.
+  const isDesktop = useIsDesktop();
+  const [mobileAbierto, setMobileAbierto] = useState(false);
+  const [desktopAbierto, setDesktopAbierto] = useState(getHistorialDesktopAbierto);
+  const historialAbierto = isDesktop ? desktopAbierto : mobileAbierto;
+
+  function toggleHistorial() {
+    if (isDesktop) {
+      setDesktopAbierto((prev) => {
+        const next = !prev;
+        setHistorialDesktopAbierto(next);
+        return next;
+      });
+    } else {
+      setMobileAbierto((prev) => !prev);
+    }
+  }
+
+  /** Cierra el historial solo en mobile (drawer) — en desktop, al ser un panel persistente, elegir una conversación o arrancar una nueva no lo cierra (mismo criterio que el historial de Claude). */
+  function cerrarHistorialEnMobile() {
+    if (!isDesktop) setMobileAbierto(false);
+  }
+
   const bottomRef = useRef<HTMLDivElement>(null);
+  const retomarViajeLimpiadoRef = useRef(false);
+
+  // Limpia la conversación activa guardada y el state de navegación en
+  // cuanto sabemos el usuarioId real (puede tardar: en modo "clerk" depende
+  // de que resuelva el puente Mongo, ver useAppAuth) — así el efecto de
+  // abajo (retomar la última conversación guardada) nunca llega a pisar el
+  // input precargado. `retomarViajeLimpiadoRef` evita repetir el navigate()
+  // en cada render mientras usuarioId sigue sin resolver.
+  useEffect(() => {
+    if (!retomarViajeRef.current || retomarViajeLimpiadoRef.current || !user?.usuarioId) return;
+    retomarViajeLimpiadoRef.current = true;
+    limpiarConversacionActiva(user.usuarioId);
+    navigate(APP_ROUTES.chat.root, { replace: true, state: null });
+  }, [user?.usuarioId, navigate]);
 
   const tripTheme = useMemo(
     () => detectTripTheme(messages, ultimaRespuesta?.viaje?.preferencias),
@@ -76,7 +145,7 @@ export default function ChatPage() {
   // en vez de dejar que el próximo mensaje resuma "cualquiera en progreso"
   // silenciosamente del lado del backend.
   useEffect(() => {
-    if (mode !== "real" || !user?.usuarioId) {
+    if (!user?.usuarioId) {
       setConversaciones([]);
       return;
     }
@@ -103,7 +172,7 @@ export default function ChatPage() {
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, user?.usuarioId]);
+  }, [user?.usuarioId]);
 
   async function cargarConversacion(conversacionId: string) {
     setError(null);
@@ -179,76 +248,108 @@ export default function ChatPage() {
     setConversacionActivaId(null);
     setError(null);
     if (user?.usuarioId) limpiarConversacionActiva(user.usuarioId);
+    cerrarHistorialEnMobile();
   }
 
-  function handleToggleMode() {
-    const nuevoModo = mode === "real" ? "mock" : "real";
-    setChatMode(nuevoModo);
-    setMode(nuevoModo);
-    setMessages([]);
-    setUltimaRespuesta(null);
-    setConversacionActivaId(null);
-    setError(null);
+  async function handleSeleccionarConversacion(conversacionId: string) {
+    await cargarConversacion(conversacionId);
+    cerrarHistorialEnMobile();
+  }
+
+  function handleLogout() {
+    logout();
+    navigate(APP_ROUTES.auth.loginViajes, { replace: true });
   }
 
   function handleVerResultados() {
     navigate(APP_ROUTES.resultados.root, {
-      state: { viaje: ultimaRespuesta?.viaje ?? null },
+      // `messages` viaja también: es el respaldo de detectResultadosTheme
+      // (ver tripThemeDetector.ts) para cuando viaje.preferencias no trae
+      // señal estructurada clara — sin esto, /resultados nunca podría usar
+      // el fallback de texto libre.
+      //
+      // `conversacionId` es nuevo (2026-09-14): el flujo real de
+      // /resultados pasó a ser POST /api/scraping-results {conversacionId}
+      // → POST /api/travels — necesita la conversación de MS1, no solo el
+      // `viaje` ya resuelto (ver travelPlan.service.ts).
+      state: {
+        viaje: ultimaRespuesta?.viaje ?? null,
+        conversacionId: ultimaRespuesta?.conversacionId ?? null,
+        messages,
+      },
     });
   }
 
   return (
-    <div className="fv-theme-transition mx-auto flex min-h-screen w-full max-w-5xl gap-4 p-3 sm:p-4">
-      {mode === "real" && user && (
-        <aside className="hidden w-64 flex-none sm:block">
-          <ConversationList
-            conversaciones={conversaciones}
-            activaId={conversacionActivaId}
-            onSeleccionar={cargarConversacion}
-            onNueva={handleNuevaConversacion}
-            cargando={cargandoConversaciones}
-          />
+    <div className="flex min-h-screen w-full">
+      {/* Desktop (md:+): panel fijo que empuja el contenido — nunca tapa
+          nada. El ancho anima entre 0 y 18rem (w-72) con overflow-hidden en
+          el contenedor externo; el interno queda fijo en w-72 para que el
+          contenido no se aplaste durante la transición, solo se recorte. */}
+      {isDesktop && user && (
+        <aside
+          className={`fv-theme-transition hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out md:block ${
+            desktopAbierto ? "w-72 border-r border-border" : "w-0"
+          }`}
+        >
+          <div className="flex h-full w-72 flex-col gap-1 p-3">
+            <p className="px-1 pb-1 text-sm font-semibold text-foreground">Tus conversaciones</p>
+            <div className="min-h-0 flex-1">
+              <ConversationList
+                conversaciones={conversaciones}
+                activaId={conversacionActivaId}
+                onSeleccionar={handleSeleccionarConversacion}
+                onNueva={handleNuevaConversacion}
+                cargando={cargandoConversaciones}
+              />
+            </div>
+            <AccountFooter nombre={user.nombre} onLogout={handleLogout} />
+          </div>
         </aside>
       )}
 
+      {/* Mobile: mismo Sheet/drawer de siempre, sin cambios de comportamiento — controlado por `mobileAbierto`, nunca se abre en desktop. */}
+      {user && (
+        <Sheet open={mobileAbierto} onOpenChange={setMobileAbierto}>
+          <SheetContent side="left" className="p-0">
+            <SheetHeader>
+              <SheetTitle>Tus conversaciones</SheetTitle>
+            </SheetHeader>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <ConversationList
+                  conversaciones={conversaciones}
+                  activaId={conversacionActivaId}
+                  onSeleccionar={handleSeleccionarConversacion}
+                  onNueva={handleNuevaConversacion}
+                  cargando={cargandoConversaciones}
+                />
+              </div>
+              <AccountFooter nombre={user.nombre} onLogout={handleLogout} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+    <div className="fv-theme-transition mx-auto flex min-h-screen w-full max-w-3xl flex-1 flex-col p-3 sm:p-4">
       <div className="flex min-w-0 flex-1 flex-col">
-      <header className="fv-theme-transition mb-4 border-b pb-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <Logo withWordmark size={30} variant={theme === "dark" ? "onDark" : "default"} />
-            {mode === "mock" ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                Modo demo
-              </span>
-            ) : (
-              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
-                Modo real
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={handleToggleMode}>
-              {mode === "real" ? "Probar modo demo" : "Volver a modo real"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                logout();
-                navigate(APP_ROUTES.auth.loginViajes, { replace: true });
-              }}
-            >
-              Salir
-            </Button>
-          </div>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {user ? `Hola, ${user.nombre}` : "Armá tu viaje charlando con la IA"}
-        </p>
+      <header className="fv-theme-transition mb-4 flex items-center gap-2 border-b pb-3">
+        {user && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Ver historial de conversaciones"
+            aria-expanded={historialAbierto}
+            onClick={toggleHistorial}
+          >
+            <Menu className="size-4" />
+          </Button>
+        )}
+        <Logo withWordmark size={30} variant={theme === "dark" ? "onDark" : "default"} />
       </header>
 
-      <div className="min-w-0 flex-1 space-y-3 overflow-y-auto py-2">
+      <div className="fv-scroll-thin min-w-0 flex-1 space-y-3 overflow-y-auto py-2">
         {messages.length === 0 && (
           <p className="text-sm text-muted-foreground">
             Contanos cuándo, con quién y con qué presupuesto querés viajar.
@@ -299,19 +400,17 @@ export default function ChatPage() {
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="flex gap-2 border-t pt-3">
-        <Input
-          className="h-11 min-w-0 flex-1"
+      <form onSubmit={handleSubmit} className="border-t pt-3">
+        <ChatInputArea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={setInput}
+          onEnviar={() => enviar(input)}
           placeholder={conversacionCompleta ? "Encuesta completa" : "Escribí tu mensaje..."}
           disabled={isSending || conversacionCompleta}
         />
-        <Button type="submit" className="h-11" disabled={isSending || conversacionCompleta || !input.trim()}>
-          Enviar
-        </Button>
       </form>
       </div>
+    </div>
     </div>
   );
 }

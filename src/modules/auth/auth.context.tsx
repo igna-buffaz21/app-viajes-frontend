@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@clerk/react";
+import axios from "axios";
 
 import type { AuthUserResponse } from "./auth.types";
 import { authService } from "./auth.service";
@@ -15,6 +16,18 @@ import { authService } from "./auth.service";
 type AuthContextValue = {
   user: AuthUserResponse | null;
   isLoading: boolean;
+  /**
+   * Motivo de por qué GET /api/me falló con una sesión de Clerk activa
+   * (isSignedIn=true). Antes esto solo se logueaba por console.error y se
+   * tragaba silenciosamente (user=null) — indistinguible de "todavía no
+   * logueado", lo que hacía que RequireSession mandara de vuelta a
+   * /login-viajes, donde <SignIn/> detecta la sesión de Clerk activa y
+   * redirige de nuevo a /chat: loop infinito sin ningún mensaje visible.
+   * Con este campo, RequireSession puede distinguir "no logueado" de
+   * "logueado pero algo del lado de la app falló" y mostrar el error en vez
+   * de rebotar.
+   */
+  error: string | null;
   refreshUser: () => Promise<void>;
   logoutLocalUser: () => void;
 };
@@ -26,10 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [user, setUser] = useState<AuthUserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function refreshUser() {
     if (!isLoaded || !isSignedIn) {
       setUser(null);
+      setError(null);
       setIsLoading(false);
       return;
     }
@@ -38,9 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       const authUser = await authService.getAuth();
       setUser(authUser);
-    } catch (error) {
-      console.error("Error obteniendo usuario autenticado:", error);
+      setError(null);
+    } catch (err) {
+      const detalle = axios.isAxiosError(err)
+        ? `GET /api/me → ${err.response?.status ?? "sin respuesta del gateway"} ${JSON.stringify(err.response?.data ?? err.message)}`
+        : String(err);
+      console.error("Error obteniendo usuario autenticado:", detalle);
       setUser(null);
+      setError(detalle);
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function logoutLocalUser() {
     setUser(null);
+    setError(null);
   }
 
   useEffect(() => {
@@ -59,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
+        error,
         refreshUser,
         logoutLocalUser,
       }}

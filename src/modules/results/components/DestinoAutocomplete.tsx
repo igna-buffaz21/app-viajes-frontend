@@ -85,7 +85,7 @@ export function DestinoAutocomplete({ disabled, onSeleccionar }: DestinoAutocomp
         <p className="mt-1 text-xs text-muted-foreground">Buscando destinos...</p>
       )}
       {abierto && sugerencias.length > 0 && (
-        <ul className="fv-theme-transition absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-background shadow-md">
+        <ul className="fv-theme-transition fv-scroll-thin absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-background shadow-md">
           {sugerencias.map((sugerencia) => (
             <li key={sugerencia.slug}>
               <button

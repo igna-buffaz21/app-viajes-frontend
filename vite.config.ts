@@ -17,41 +17,26 @@ export default defineConfig({
     },
   },
   server: {
-    // Ninguno de los backends de Grupo 2/Grupo 3 tiene middleware CORS (son
-    // solo lectura, no se pueden tocar) — este proxy hace que las llamadas a
-    // /api salgan del mismo origen que el front, evitando el bloqueo de CORS
-    // del browser. Grupo 3 corre ms2-scraping y ms3-armado como procesos
-    // Express independientes (puertos propios, NO unificados con MS1 — ver
-    // AUDITORIA_BACKEND.md), así que hace falta rutear cada prefijo al
-    // puerto correcto. Las entradas específicas van ANTES del catch-all
-    // "/api" (MS1): Vite matchea por el primer prefijo que calza, en el
-    // orden en que están declaradas las claves acá abajo.
+    // A partir de la integración de Clerk, el front deja de pegarle a los
+    // microservicios directo (MS1 en :3000, MS2 en :3003, MS3 en :3004) y
+    // todo pasa por TP-Grupo-1-Clerk-Gateway (Back/), que unifica las 3
+    // rutas bajo un solo host y ya inyecta x-user-id + valida el token de
+    // Clerk donde corresponde (ver gateway: Back/src/app.js — MS1 en
+    // "Opción B" sin requireAuth todavía, MS2/MS3 sí lo exigen).
+    //
+    // El gateway ya trae su propio CORS (cors({origin:true, credentials:
+    // true})) así que este proxy ya no es necesario para evitar el bloqueo
+    // del browser — se mantiene igual por comodidad de desarrollo (mismo
+    // origen, no hay que armar URLs absolutas en cada fetch) y porque
+    // aísla al front de dónde corre el gateway en cada momento (local,
+    // red de Grupo 1, etc.): alcanza con cambiar este único target.
+    //
+    // Confirmado corriendo el gateway localmente (2026-09-13) con
+    // PORT=4000 (el 3000 lo ocupa MS1) y MS1_URL/MS2_URL/MS3_URL apuntando
+    // a localhost — GET /api/health respondió 200 desde acá.
     proxy: {
-      // ms2-scraping (Grupo 3), puerto 3003 — confirmado en runtime
-      // (2026-08-31) contra el repo clonado, no solo contra la
-      // documentación. /api/health es ambiguo entre los tres backends; hoy
-      // el único consumidor del front es el chequeo de salud de MS2
-      // (busqueda.real.adapter.ts), así que se rutea acá. Si más adelante
-      // hace falta un health check de MS1/MS3 desde el front, esto necesita
-      // un path propio (ej. un query param o un prefijo distinto), no se
-      // puede desambiguar solo con la URL tal como está hoy.
-      "/api/health": { target: "http://localhost:3003", changeOrigin: true },
-      "/api/sugerencias": { target: "http://localhost:3003", changeOrigin: true },
-      "/api/viaje": { target: "http://localhost:3003", changeOrigin: true },
-      "/api/vuelos": { target: "http://localhost:3003", changeOrigin: true },
-      "/api/hoteles": { target: "http://localhost:3003", changeOrigin: true },
-      "/api/actividades": { target: "http://localhost:3003", changeOrigin: true },
-
-      // MS3 (ms3-armado, puerto 3004) NO se proxea todavía: nada del front
-      // lo consume hoy (ver explorar.page.tsx — la pantalla se detiene en
-      // los resultados de MS2) y su ruta expuesta (/api/travel-plans)
-      // colisiona de nombre con la de MS1 (/api/travel-plans/generar) — el
-      // mismo problema de colisión que ya tenían documentado. Agregarla sin
-      // necesidad real hoy solo introduce ese riesgo sin ningún beneficio.
-
-      // MicroServicioGrupo2 (MS1), catch-all — tiene que ir último.
       "/api": {
-        target: "http://localhost:3000",
+        target: "http://localhost:4000",
         changeOrigin: true,
       },
     },

@@ -35,7 +35,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
             </a>
           ),
           table: ({ children }) => (
-            <div className="my-2 overflow-x-auto rounded-[var(--radius-md)] border border-border">
+            <div className="fv-scroll-thin my-2 overflow-x-auto rounded-[var(--radius-md)] border border-border">
               <table className="w-full border-collapse text-[13.5px]">{children}</table>
             </div>
           ),

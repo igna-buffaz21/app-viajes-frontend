@@ -3,10 +3,9 @@ import { mapBusquedaMs2 } from "./results.mapper";
 import type { BusquedaParams, BusquedaResultados } from "./results.types";
 
 /**
- * A diferencia de chat.service.ts, acá NO hay modo mock: el propósito
- * específico de /explorar es demostrar la conexión real a MS2 (scraping de
- * vuelos/hoteles/actividades). Si no hay conexión, tiene que verse
- * claramente que no la hay — no un fixture disfrazado de resultado real.
+ * El propósito específico de /explorar es demostrar la conexión real a MS2
+ * (scraping de vuelos/hoteles/actividades). Si no hay conexión, tiene que
+ * verse claramente que no la hay — no un fixture disfrazado de resultado real.
  */
 export type ResultadoBusqueda =
   | { estado: "ok"; datos: BusquedaResultados }

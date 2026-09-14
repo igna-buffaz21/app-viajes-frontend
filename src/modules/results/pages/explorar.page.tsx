@@ -19,12 +19,9 @@ type EstadoBusqueda = "idle" | "buscando" | "error";
 const HOY = new Date().toISOString().slice(0, 10);
 
 /**
- * A diferencia de /resultados (mock), acá el objetivo específico es
- * demostrar la conexión real a MS2 — así que no hay modo simulado: si el
- * servicio no responde, se ve claramente que no responde, con este mismo
- * estado (ver ServicioNoDisponible más abajo). Hoy (2026-08-31) va a ser
- * el único estado visible, porque MS2 no está corriendo en ningún puerto
- * accesible todavía (ver busqueda.real.adapter.ts).
+ * El objetivo específico de /explorar es demostrar la conexión real a MS2
+ * — así que no hay modo simulado: si el servicio no responde, se ve
+ * claramente que no responde, con este mismo estado.
  */
 function ServicioNoDisponible({ onReintentar }: { onReintentar: () => void }) {
   return (

@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/react";
 
 import { setupApiInterceptors } from "./lib/interceptor";
 import { APP_ROUTES } from "./config/app.routes";
+import { FullPageLoader } from "./components/FullPageLoader";
 import { UnauthorizedPage } from "./modules/auth/pages/unauthorized.page";
 import { InactiveAccountPage } from "./modules/auth/pages/inactiveAccount.page";
 
@@ -28,7 +29,7 @@ function App() {
   }, [isLoaded, getToken]);
 
   if (!isLoaded || !isApiReady) {
-    return <div>Cargando...</div>;
+    return <FullPageLoader />;
   }
 
   return (

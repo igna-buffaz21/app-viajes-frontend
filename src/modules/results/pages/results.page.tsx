@@ -1,52 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_ROUTES } from "@/config/app.routes";
-import type { PerfilViaje } from "@/modules/chat/chat.types";
+import type { ChatMessage, PerfilViaje } from "@/modules/chat/chat.types";
+import { ThinkingIndicator } from "@/modules/chat/components/ThinkingIndicator";
+import { detectResultadosTheme } from "@/modules/chat/tripThemeDetector";
+import type { RetomarViajeState } from "@/modules/chat/reanudarViaje";
 
-import { BusquedaLoadingState } from "../components/BusquedaLoadingState";
-import { BusquedaResultadosView } from "../components/BusquedaResultadosView";
-import { busquedaService } from "../busqueda.service";
-import { convertirArsAUsd, convertirUsdAArs, obtenerCotizacionDolar, type CotizacionDolar } from "../dolar.service";
-import { armarParamsDesdeEncuesta } from "../resultados.desdeEncuesta";
-import type { BusquedaResultados } from "../results.types";
+import { PropuestasView } from "../components/PropuestasView";
+import { travelPlanService } from "../travelPlan.service";
+import type { Propuesta } from "../results.types";
 
 type Estado =
   | { tipo: "preparando" }
   | { tipo: "destinoAbierto" }
   | { tipo: "faltanDatos"; camposFaltantes: string[] }
-  | { tipo: "destinoNoEncontrado"; destinoBuscado: string }
-  // presupuesto.moneda === "USD" y no hay ninguna cotización (ni fetch ni cache) para convertir.
-  | { tipo: "cotizacionFaltante"; montoUsd: number }
   | { tipo: "buscando" }
   | { tipo: "servicioNoDisponible" }
   | { tipo: "error"; mensaje: string }
-  | { tipo: "ok"; resultados: BusquedaResultados };
-
-function formatMonto(monto: number): string {
-  return monto.toLocaleString("es-AR");
-}
-
-/** Arma el texto "Presupuesto: ARS $X (≈ USD $Y)" — o su variante sin cotización si DolarApi no respondió y el monto ya estaba en ARS (ahí no hace falta convertir para poder buscar, solo para mostrar el equivalente). */
-function formatPresupuestoInfo(
-  original: { monto: number; moneda: string },
-  cotizacion: CotizacionDolar | null
-): string {
-  const esUsd = original.moneda.toUpperCase() === "USD";
-
-  if (!esUsd) {
-    return cotizacion
-      ? `Presupuesto: ARS $${formatMonto(original.monto)} (≈ USD $${formatMonto(convertirArsAUsd(original.monto, cotizacion))})`
-      : `Presupuesto: ARS $${formatMonto(original.monto)} (cotización del dólar no disponible ahora — no se pudo calcular el equivalente en USD)`;
-  }
-
-  // esUsd === true acá siempre viene con cotizacion no-null: el caller
-  // resuelve a "cotizacionFaltante" antes de llegar a este punto si no la hay.
-  const budgetArs = convertirUsdAArs(original.monto, cotizacion!);
-  return `Presupuesto: USD $${formatMonto(original.monto)} (≈ ARS $${formatMonto(budgetArs)})`;
-}
+  | { tipo: "ok"; propuestas: Propuesta[]; warnings: string[] };
 
 function Screen({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -60,27 +35,51 @@ function Screen({ title, children }: { title: string; children: React.ReactNode 
   );
 }
 
-function VolverAlChatButton() {
+/**
+ * A diferencia del link genérico del header (que solo navega a /chat), este
+ * botón se usa en las pantallas donde lo que falta es corregir algo de la
+ * encuesta (destino abierto, datos faltantes). Pasa el `viaje` ya juntado
+ * vía router state para que ChatPage arranque una conversación NUEVA con
+ * eso precargado en el input, en vez de reabrir la conversación vieja — que
+ * MS1 va a rechazar con 409 porque ya la marcó "completo" (confirmado con
+ * curl real).
+ */
+function VolverAlChatButton({ viaje, motivo }: { viaje: PerfilViaje | null; motivo: RetomarViajeState["motivo"] }) {
+  const navigate = useNavigate();
+
+  function handleClick() {
+    const state: { retomarViaje?: RetomarViajeState } = viaje ? { retomarViaje: { viaje, motivo } } : {};
+    navigate(APP_ROUTES.chat.root, { state });
+  }
+
   return (
-    <Button variant="outline" size="sm" asChild>
-      <Link to={APP_ROUTES.chat.root}>Volver al chat</Link>
+    <Button variant="outline" size="sm" onClick={handleClick}>
+      Volver al chat
     </Button>
   );
 }
 
 export default function ResultsPage() {
   const location = useLocation();
-  const viaje = (location.state as { viaje?: PerfilViaje | null } | null)?.viaje ?? null;
+  const navState = location.state as {
+    viaje?: PerfilViaje | null;
+    conversacionId?: string | null;
+    messages?: ChatMessage[];
+  } | null;
+  const viaje = navState?.viaje ?? null;
+  const conversacionId = navState?.conversacionId ?? null;
+  // Respaldo de detectResultadosTheme cuando viaje.preferencias no trae
+  // señal estructurada clara (ver tripThemeDetector.ts) — ausente si se
+  // llega a /resultados por otro camino que no sea "Ver resultados" del
+  // chat (ej. navegación directa a la URL).
+  const tema = detectResultadosTheme(viaje, navState?.messages ?? []);
 
   const [estado, setEstado] = useState<Estado>({ tipo: "preparando" });
-  const [presupuestoInfo, setPresupuestoInfo] = useState<string | null>(null);
 
   // React.StrictMode (main.tsx) monta cada componente dos veces en
   // desarrollo, disparando este efecto dos veces — sin esta guarda, salían
-  // dos búsquedas reales en paralelo contra MS2 y la que perdía la carrera
-  // se mostraba como error genérico ("No pudimos completar la búsqueda"),
-  // aunque la otra sí hubiera funcionado. Mismo patrón que ya usan
-  // chat.page.tsx (cargarConversacion) y el results.page.tsx viejo (`vigente`).
+  // dos búsquedas reales en paralelo. Mismo patrón que chat.page.tsx
+  // (cargarConversacion).
   const runIdRef = useRef(0);
 
   async function prepararYBuscar() {
@@ -89,43 +88,35 @@ export default function ResultsPage() {
 
     setEstado({ tipo: "preparando" });
 
-    const [resultadoParams, cotizacion] = await Promise.all([
-      armarParamsDesdeEncuesta(viaje),
-      obtenerCotizacionDolar(),
-    ]);
-    if (!vigente()) return;
-
-    if (!resultadoParams.ok) {
-      if (resultadoParams.motivo === "destinoAbierto") {
-        setEstado({ tipo: "destinoAbierto" });
-      } else if (resultadoParams.motivo === "faltanDatos") {
-        setEstado({ tipo: "faltanDatos", camposFaltantes: resultadoParams.camposFaltantes });
-      } else {
-        setEstado({ tipo: "destinoNoEncontrado", destinoBuscado: resultadoParams.destinoBuscado });
-      }
+    if (!viaje || !conversacionId) {
+      setEstado({ tipo: "faltanDatos", camposFaltantes: ["toda la encuesta"] });
       return;
     }
 
-    const { params, presupuestoOriginal } = resultadoParams;
-    const esUsd = presupuestoOriginal.moneda.toUpperCase() === "USD";
-
-    if (esUsd && !cotizacion) {
-      setEstado({ tipo: "cotizacionFaltante", montoUsd: presupuestoOriginal.monto });
+    // Pre-chequeo del lado del cliente: MS2 (POST /api/scraping-results)
+    // rechaza sin destino igual, pero acá se evita el viaje de red y se da
+    // un mensaje más claro. CONFIRMADO con curl real (2026-09-14):
+    // viaje.destino.lugaresPreferidos es un array de STRINGS, no de objetos
+    // {ciudad,pais} como espera scrapingResult.service.js de MS2 — por eso
+    // siempre se manda `destinos` explícito más abajo, no se confía en que
+    // MS2 lo derive solo de la conversación.
+    const destinos = viaje.destino?.lugaresPreferidos?.filter((d) => d.trim()) ?? [];
+    if (destinos.length === 0) {
+      setEstado({ tipo: "destinoAbierto" });
       return;
     }
 
-    const budget = esUsd
-      ? convertirUsdAArs(presupuestoOriginal.monto, cotizacion!)
-      : presupuestoOriginal.monto;
-
-    setPresupuestoInfo(formatPresupuestoInfo(presupuestoOriginal, cotizacion));
     setEstado({ tipo: "buscando" });
 
-    const resultado = await busquedaService.buscar({ ...params, budget });
+    const resultado = await travelPlanService.armarPropuestas({
+      conversacionId,
+      destinos,
+      pasajeros: viaje.viajeros?.cantidadTotal,
+    });
     if (!vigente()) return;
 
     if (resultado.estado === "ok") {
-      setEstado({ tipo: "ok", resultados: resultado.datos });
+      setEstado({ tipo: "ok", propuestas: resultado.propuestas, warnings: resultado.warnings });
     } else if (resultado.estado === "servicioNoDisponible") {
       setEstado({ tipo: "servicioNoDisponible" });
     } else {
@@ -139,7 +130,7 @@ export default function ResultsPage() {
   }, []);
 
   return (
-    <div className="fv-theme-transition mx-auto w-full max-w-3xl space-y-6 p-3 sm:p-4">
+    <div className="fv-theme-transition mx-auto w-full max-w-6xl space-y-6 p-3 sm:p-4">
       <header className="fv-theme-transition flex flex-wrap items-center justify-between gap-2 border-b pb-3">
         <h1 className="text-lg font-bold">Tu viaje</h1>
         <div className="flex items-center gap-2">
@@ -150,8 +141,6 @@ export default function ResultsPage() {
         </div>
       </header>
 
-      {presupuestoInfo && <p className="text-sm font-medium">{presupuestoInfo}</p>}
-
       {estado.tipo === "preparando" && (
         <p className="text-sm text-muted-foreground">Preparando tu búsqueda...</p>
       )}
@@ -159,11 +148,11 @@ export default function ResultsPage() {
       {estado.tipo === "destinoAbierto" && (
         <Screen title="Tu encuesta dejó el destino abierto">
           <p className="max-w-sm text-xs text-muted-foreground">
-            Le diste a la IA libertad para elegir el destino, pero para buscar vuelos y hoteles
-            reales necesitamos uno concreto — hoy todavía no tenemos un servicio que sugiera
-            destinos automáticamente. Volvé al chat y contanos un destino puntual.
+            Le diste a la IA libertad para elegir el destino, pero para armar propuestas reales
+            necesitamos uno concreto — hoy todavía no tenemos un servicio que sugiera destinos
+            automáticamente. Volvé al chat y contanos un destino puntual.
           </p>
-          <VolverAlChatButton />
+          <VolverAlChatButton viaje={viaje} motivo="destinoAbierto" />
         </Screen>
       )}
 
@@ -173,43 +162,25 @@ export default function ResultsPage() {
             Nos falta: {estado.camposFaltantes.join(", ")}. Volvé al chat para completar la
             encuesta.
           </p>
-          <VolverAlChatButton />
+          <VolverAlChatButton viaje={viaje} motivo="faltanDatos" />
         </Screen>
       )}
 
-      {estado.tipo === "destinoNoEncontrado" && (
-        <Screen title="No encontramos ese destino">
+      {estado.tipo === "buscando" && (
+        <div className="fv-theme-transition flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-8 text-center">
+          <ThinkingIndicator active theme={tema} />
           <p className="max-w-sm text-xs text-muted-foreground">
-            Buscamos "{estado.destinoBuscado}" y no encontramos ningún destino que coincida.
-            Volvé al chat para ajustarlo.
+            Esto puede tardar un par de minutos — buscamos vuelos, hoteles y actividades reales, y
+            después le pedimos a la IA que arme 3 propuestas completas con eso.
           </p>
-          <VolverAlChatButton />
-        </Screen>
+        </div>
       )}
-
-      {estado.tipo === "cotizacionFaltante" && (
-        <Screen title="No pudimos confirmar la cotización del dólar">
-          <p className="max-w-sm text-xs text-muted-foreground">
-            Tu presupuesto está en USD ${formatMonto(estado.montoUsd)} y necesitamos convertirlo
-            para buscar, pero no logramos obtener la cotización (ni una guardada de antes).
-            Reintentá en unos minutos, o indicá tu presupuesto directamente en pesos en el chat.
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={prepararYBuscar}>
-              Reintentar
-            </Button>
-            <VolverAlChatButton />
-          </div>
-        </Screen>
-      )}
-
-      {estado.tipo === "buscando" && <BusquedaLoadingState />}
 
       {estado.tipo === "servicioNoDisponible" && (
         <Screen title="El servicio de búsqueda todavía no está disponible">
           <p className="max-w-sm text-xs text-muted-foreground">
-            No pudimos conectar con el servicio que busca vuelos, hoteles y actividades reales.
-            Puede que todavía no esté levantado — probá de nuevo en un rato.
+            No pudimos conectar con el servicio que arma tu viaje. Puede que todavía no esté
+            levantado — probá de nuevo en un rato.
           </p>
           <Button variant="outline" size="sm" onClick={prepararYBuscar}>
             Reintentar
@@ -217,22 +188,35 @@ export default function ResultsPage() {
         </Screen>
       )}
 
-      {estado.tipo === "error" && <p className="text-sm text-destructive">{estado.mensaje}</p>}
+      {estado.tipo === "error" && (
+        <Screen title="No pudimos armar tu viaje">
+          <p className="max-w-sm text-xs text-muted-foreground">{estado.mensaje}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={prepararYBuscar}>
+              Reintentar
+            </Button>
+            <VolverAlChatButton viaje={viaje} motivo="faltanDatos" />
+          </div>
+        </Screen>
+      )}
 
       {estado.tipo === "ok" && (
         <>
-          {estado.resultados.warnings.length > 0 && (
-            <div className="fv-theme-transition rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              <strong>Algunas fuentes no respondieron:</strong>
-              <ul className="mt-1 list-inside list-disc">
-                {estado.resultados.warnings.map((warning, i) => (
-                  <li key={i}>{warning}</li>
-                ))}
-              </ul>
+          {estado.warnings.length > 0 && (
+            <div className="fv-theme-transition flex gap-3 rounded-2xl border border-accent/30 bg-accent-soft p-4 text-sm text-foreground">
+              <Info className="mt-0.5 size-4 flex-none text-accent" aria-hidden="true" />
+              <div>
+                <p className="font-medium">Algunas fuentes no respondieron</p>
+                <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                  {estado.warnings.map((warning, i) => (
+                    <li key={i}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
-          <BusquedaResultadosView resultados={estado.resultados} />
+          <PropuestasView propuestas={estado.propuestas} />
         </>
       )}
     </div>

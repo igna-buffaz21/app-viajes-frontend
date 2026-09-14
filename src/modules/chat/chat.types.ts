@@ -94,6 +94,6 @@ export interface ChatRespuesta {
   preguntas: PreguntaPerfil[];
   /** Nombres de campo que el backend marca como prioritarios entre los faltantes. Sin UI propia todavía. */
   camposFaltantesImportantes?: string[];
-  /** Id de la conversación en el backend (POST /api/conversaciones/mensaje). Ausente en modo mock. */
+  /** Id de la conversación en el backend (POST /api/survey). */
   conversacionId?: string;
 }

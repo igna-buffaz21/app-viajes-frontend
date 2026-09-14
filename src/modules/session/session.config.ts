@@ -1,12 +1,15 @@
 export type AuthMode = "clerk" | "local";
 
 /**
- * Hoy no hay credenciales reales de Clerk ni soporte de /auth/me en el backend
- * (ver AUDITORIA_BACKEND.md), así que el default es "local" para toda la sesión.
+ * Ya tenemos Publishable Key real de Clerk (instancia FreeVago,
+ * current-krill-88) y el gateway de Grupo 1 expone GET /api/me con
+ * requireAuth real — confirmado corriendo el gateway localmente
+ * (TP-Grupo-1-Clerk-Gateway/Back) contra MS1/MS2/MS3. Por eso el default
+ * pasa a "clerk".
  *
- * TODO: cuando el otro grupo confirme credenciales de Clerk + soporte de /auth/me
- * en MicroServicioGrupo2, alcanza con setear VITE_AUTH_MODE=clerk en el .env del
- * front (no hace falta tocar código de este módulo ni el de modules/auth/*).
+ * VITE_AUTH_MODE=local queda como válvula de emergencia: si el gateway se
+ * cae o Clerk tiene un problema, se puede volver a modo local sin tocar
+ * código, solo cambiando esa variable en el .env.
  */
 export function getAuthMode(): AuthMode {
   const explicit = import.meta.env.VITE_AUTH_MODE;
@@ -15,5 +18,5 @@ export function getAuthMode(): AuthMode {
     return explicit;
   }
 
-  return "local";
+  return "clerk";
 }

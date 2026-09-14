@@ -5,7 +5,6 @@ import type {
   Precio,
   RawActividadOpcion,
   RawBusquedaMs2Response,
-  RawBusquedaResponse,
   RawHotelOpcion,
   RawVueloOpcion,
   Vuelo,
@@ -14,7 +13,7 @@ import type {
 // CONFIRMADO (2026-08-31, ver results.types.ts): los nombres de campo de
 // RawVueloOpcion/RawHotelOpcion/RawActividadOpcion coinciden con el output
 // real de ms2-scraping — parsePrecio/parseRating/map* de acá abajo aplican
-// tal cual a datos reales, no solo al fixture mock.
+// tal cual a datos reales.
 
 /**
  * Heurística de moneda: el ejemplo real del encargo mezcla precios "chicos"
@@ -26,6 +25,16 @@ import type {
  */
 export function parsePrecio(raw: string): Precio {
   const limpio = raw.replace(/[^\d.,]/g, "");
+
+  // CONFIRMADO con datos reales (2026-09-14): actividades a veces trae
+  // precioPorPersona = "No especificado" — sin dígitos. Antes esto caía en
+  // Number("") === 0, mostrando un "USD 0" inventado. NaN se propaga hasta
+  // formatPrecio (BusquedaResultadosView.tsx), que sí sabe mostrar "Precio
+  // no disponible" en vez de inventar un monto.
+  if (!limpio) {
+    return { monto: NaN, moneda: "" };
+  }
+
   const esMiles = /^\d{1,3}(\.\d{3})+$/.test(limpio);
 
   if (esMiles) {
@@ -80,21 +89,9 @@ export function mapActividad(raw: RawActividadOpcion): Actividad {
   };
 }
 
-export function mapBusqueda(raw: RawBusquedaResponse): BusquedaResultados {
-  return {
-    vuelos: raw.resultados.vuelos.opciones.map(mapVuelo),
-    hoteles: raw.resultados.hoteles.opciones.map(mapHotel),
-    actividades: raw.resultados.actividades.opciones.map(mapActividad),
-    warnings: raw.warnings ?? [],
-  };
-}
-
 /**
- * Para el sobre real de POST /api/viaje (ms2-scraping) — distinto de
- * mapBusqueda() de arriba porque cada fuente trae su propio `error` en vez
- * de un `warnings[]` global (ver RawBusquedaMs2Response). Reusa los mappers
- * por ítem tal cual: el shape de cada opción (vuelo/hotel/actividad) es
- * idéntico entre el fixture mock y los datos reales, confirmado en runtime.
+ * Sobre real de POST /api/viaje (ms2-scraping) — cada fuente trae su propio
+ * `error` en vez de un `warnings[]` global (ver RawBusquedaMs2Response).
  */
 export function mapBusquedaMs2(raw: RawBusquedaMs2Response): BusquedaResultados {
   const { vuelos, hoteles, actividades } = raw.resultados;

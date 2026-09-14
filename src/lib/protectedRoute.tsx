@@ -4,16 +4,19 @@ import { useAuth } from "@clerk/react";
 
 import { APP_ROUTES } from "@/config/app.routes";
 import { useAuthUser } from "@/modules/auth/auth.context";
+import { FullPageLoader } from "@/components/FullPageLoader";
 
 type ProtectedRouteProps = {
   children: ReactNode;
 };
 
 /**
- * Mecanismo genérico de auth-gating por sesión de Clerk (isSignedIn + cuenta
- * activa). El producto municipal que usaba esto con gating por rol
- * (allowedRoles) se eliminó junto con sus rutas — ninguna ruta usa este
- * componente hoy, se deja como mecanismo reutilizable para lo que venga.
+ * Mecanismo genérico de auth-gating por sesión de Clerk (isSignedIn + perfil
+ * cargado). El producto municipal que usaba esto con gating por rol+status
+ * (allowedRoles / user.status) se eliminó junto con sus rutas — ninguna ruta
+ * usa este componente hoy, se deja como mecanismo reutilizable para lo que
+ * venga. El check de user.status se sacó porque AuthUserResponse ya no tiene
+ * ese campo (el gateway de FreeVago no expone "status", ver auth.types.ts).
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
@@ -22,7 +25,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuthUser();
 
   if (!isLoaded || isLoading) {
-    return <div>Cargando...</div>;
+    return <FullPageLoader />;
   }
 
   if (!isSignedIn) {
@@ -37,10 +40,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to={APP_ROUTES.auth.login} replace />;
-  }
-
-  if (user.status !== "active") {
-    return <Navigate to={APP_ROUTES.auth.inactive} replace />;
   }
 
   return <>{children}</>;
